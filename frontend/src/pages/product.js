@@ -9,7 +9,7 @@ const state = {
   reviewPage: 0,
   reviewTotalPages: 0,
   reviewTotal: 0,
-  frequentlyBought: [], // Track recommended cross-sells
+  frequentlyBought: [],
 };
 
 export async function ProductView() {
@@ -137,7 +137,6 @@ async function loadProduct() {
     await loadReviews(true);
     renderReviewForm();
     
-    // Fire recommendation scanning alongside product assembly
     await loadFrequentlyBought();
   } catch (err) {
     renderHeroError(err?.message || 'Product not found');
@@ -367,9 +366,11 @@ async function submitReview() {
 
 async function loadFrequentlyBought() {
   try {
-    // Queries backend for standard structural data tied to this item
     const data = await api(`/recommendations/products/${state.productId}/frequently-bought-together?limit=5`);
-    state.frequentlyBought = data?.recommendations || data || [];
+    state.frequentlyBought = (data?.frequentlyBoughtTogether || []).map(item => ({
+    ...item,
+    id: item.productId,
+}));
     renderFrequentlyBought();
   } catch (err) {
     const panel = document.getElementById('frequently-bought-panel');
@@ -384,7 +385,7 @@ function renderFrequentlyBought() {
   if (!panel) return;
 
   if (!state.frequentlyBought.length) {
-    panel.parentElement?.classList.add('hidden'); // Clear space out if layout empty
+    panel.parentElement?.classList.add('hidden');
     return;
   }
 
@@ -421,7 +422,6 @@ function renderFrequentlyBought() {
     </div>
   `;
 
-  // Bind active listeners to items targeting standard addToCart rules
   panel.querySelectorAll('[data-freq-cart]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = Number(btn.dataset.freqCart);

@@ -40,7 +40,7 @@ function emptyMarkup(message) {
     return `<div class="text-center py-10 text-[0.72rem] tracking-[0.2em] uppercase text-muted">${message}</div>`;
 }
 
-//entry
+
 export function DashboardView() {
     if (!isAuthenticated() || !isTokenValid()) {
         window.location.href = '/login';
@@ -58,7 +58,7 @@ export function DashboardView() {
     role === 'ADMIN' ? bootAdmin() : bootCustomer();
 }
 
-//shells
+
 function AdminShell() {
     const name = getUserFirstName();
     const initial = name[0].toUpperCase();
@@ -122,7 +122,7 @@ function CustomerShell() {
       </div>
       <nav class="flex-1 py-4">
         <div class="${navSectionClass}">Discover</div>
-        <div class="${navItemBaseClass} ${navItemInactiveClass}" data-panel="recs"><span class="text-[1rem] w-4 text-center">◎</span><span class="max-md:hidden">For You</span></div>
+        <div class="${navItemBaseClass} ${navItemActiveClass}" data-panel="recs"><span class="text-[1rem] w-4 text-center">◎</span><span class="max-md:hidden">For You</span></div>
         <div class="${navSectionClass}">My Account</div>
         <div class="${navItemBaseClass} ${navItemInactiveClass}" data-panel="cart"><span class="text-[1rem] w-4 text-center">▣</span><span class="max-md:hidden">Cart</span></div>
         <div class="${navItemBaseClass} ${navItemInactiveClass}" data-panel="orders"><span class="text-[1rem] w-4 text-center">◈</span><span class="max-md:hidden">My Orders</span></div>
@@ -148,8 +148,7 @@ function CustomerShell() {
       </div>
       <div class="flex-1 p-7 max-md:p-4 overflow-y-auto">
         <div id="alert-zone"></div>
-        <div id="panel-browse" class="dash-panel"></div>
-        <div id="panel-recs" class="dash-panel hidden"></div>
+        <div id="panel-recs" class="dash-panel"></div>
         <div id="panel-cart" class="dash-panel hidden"></div>
         <div id="panel-orders" class="dash-panel hidden"></div>
         <div id="panel-reviews" class="dash-panel hidden"></div>
@@ -160,7 +159,7 @@ function CustomerShell() {
   <div id="modal-zone"></div>`;
 }
 
-//shared utils
+
 function showAlert(msg, type = 'success') {
     const zone = document.getElementById('alert-zone');
     if (!zone) return;
@@ -248,7 +247,6 @@ function navRouter(panels) {
     });
 }
 
-//admin boot
 
 function bootAdmin() {
     loadAdminOverview();
@@ -262,7 +260,7 @@ function bootAdmin() {
     });
 }
 
-//admin overview
+
 async function loadAdminOverview() {
     const el = document.getElementById('panel-overview');
     el.innerHTML = loadingMarkup('Tuning in');
@@ -318,7 +316,6 @@ async function loadRecentOrders() {
     const el = document.getElementById('admin-recent-orders');
     if (!el) return;
     try {
-        // admin doesn't have a global orders list endpoint in the spec, so we show a placeholder
         el.innerHTML = emptyMarkup('Select Orders panel to manage all orders.');
     } catch {
         el.innerHTML = emptyMarkup('—');
@@ -367,7 +364,7 @@ function openProductModal(product) {
     });
 }
 
-//admin categories
+
 async function loadAdminCategories() {
     const el = document.getElementById('panel-categories');
     el.innerHTML = loadingMarkup('Loading');
@@ -446,7 +443,7 @@ function openCatModal(cat) {
     });
 }
 
-//admin users
+
 async function loadAdminUsers() {
     const el = document.getElementById('panel-users');
     el.innerHTML = loadingMarkup('Loading users');
@@ -489,7 +486,7 @@ async function loadAdminUsers() {
     }
 }
 
-//admin cache
+
 async function loadAdminCache() {
     const el = document.getElementById('panel-cache');
     el.innerHTML = loadingMarkup('Scanning cache');
@@ -542,9 +539,9 @@ async function loadAdminCache() {
     }
 }
 
-//customer boot
+
 function bootCustomer() {
-    loadBrowse();
+    loadRecs();
     navRouter({
         browse: loadBrowse,
         recs: loadRecs,
@@ -555,7 +552,7 @@ function bootCustomer() {
     });
 }
 
-//browse products
+
 async function loadBrowse() {
     const el = document.getElementById('panel-browse');
     el.innerHTML = loadingMarkup('Channelling objects');
@@ -703,7 +700,7 @@ async function openProductDetailModal(productId) {
           </div>` : ''}
       </div>`);
 
-        // star picker
+
         const picker = document.getElementById('star-picker');
         picker.querySelectorAll('span').forEach(s => {
             s.addEventListener('click', () => {
@@ -751,7 +748,7 @@ async function openProductDetailModal(productId) {
     }
 }
 
-//recommendations
+
 async function loadRecs() {
     const el = document.getElementById('panel-recs');
     el.innerHTML = loadingMarkup('Tuning your frequency');
@@ -790,7 +787,7 @@ async function loadRecs() {
               <div class="font-bebas text-[1.6rem] text-secondary w-[52px] text-center leading-none">#${r.rank}</div>
               <div class="flex-1">
                 <div class="text-[0.82rem] mb-1">${r.name}</div>
-                <div class="text-line-bright text-[0.8rem]">$${r.price} · Pop: ${r.popularityScore * 100?.toFixed(1)}%</div>
+                <div class="text-line-bright text-[0.8rem]">$${r.price} · Pop: ${r.popularityScore?.toFixed(1)}%</div>
               </div>
               <button class="${btnBaseClass} ${btnSmClass}" data-add-cart="${r.productId}">+ Cart</button>
             </div>`).join('')}
@@ -827,7 +824,7 @@ async function loadRecs() {
     }
 }
 
-//cart
+
 async function loadCart() {
     const el = document.getElementById('panel-cart');
     el.innerHTML = loadingMarkup('Loading cart');
@@ -948,7 +945,7 @@ function openCheckout(uid, total) {
     });
 }
 
-//customer orders
+
 async function loadCustomerOrders() {
     const el = document.getElementById('panel-orders');
     el.innerHTML = loadingMarkup('Loading orders');
@@ -1009,7 +1006,7 @@ async function loadCustomerOrders() {
     }
 }
 
-//my reviews section
+
 async function loadMyReviews() {
     const el = document.getElementById('panel-reviews');
     el.innerHTML = loadingMarkup('Loading reviews');
@@ -1117,7 +1114,7 @@ async function loadMyReviews() {
     }
 }
 
-//profile
+
 async function loadProfile() {
     const el = document.getElementById('panel-profile');
     el.innerHTML = loadingMarkup('Loading profile');
@@ -1173,7 +1170,7 @@ async function loadProfile() {
     }
 }
 
-// ─── ADMIN ORDERS DASHBOARD ───────────────────────────────────────────────────
+
 async function loadAdminOrders() {
     const el = document.getElementById('panel-orders');
     el.innerHTML = loadingMarkup('Loading orders');
@@ -1232,7 +1229,7 @@ async function loadAdminOrders() {
     </div>
     <div id="orders-result"></div>`;
 
-    // wire up search
+
     document.getElementById('order-search-btn').addEventListener('click', async () => {
         const uid = document.getElementById('order-uid').value.trim();
         if (!uid) return;
@@ -1246,7 +1243,7 @@ async function loadAdminOrders() {
                 return;
             }
 
-            // update stat cards from real data
+
             const total = orders.length;
             const completed = orders.filter(o => statusKey(o.status) === 'COMPLETED').length;
             const pending = orders.filter(o => statusKey(o.status) === 'PENDING').length;
@@ -1259,7 +1256,7 @@ async function loadAdminOrders() {
             document.getElementById('od-cancelled').textContent = cancelled;
             document.getElementById('od-revenue').textContent = `$${revenue.toFixed(0)}`;
 
-            // status bar chart
+
             const statuses = [
                 {label: 'Completed', count: completed, color: 'bg-emerald-400', text: 'text-emerald-300'},
                 {label: 'Pending', count: pending, color: 'bg-yellow-400', text: 'text-yellow-300'},
@@ -1276,7 +1273,7 @@ async function loadAdminOrders() {
           </div>
         </div>`).join('');
 
-            // revenue by status bar chart
+
             const revByStatus = [
                 {
                     label: 'Completed',
@@ -1309,7 +1306,7 @@ async function loadAdminOrders() {
           </div>
         </div>`).join('');
 
-            // orders table
+
             res.innerHTML = `
         <div class="${tableWrapClass}">
           <table class="${tableClass}">
@@ -1366,7 +1363,7 @@ async function loadAdminOrders() {
 }
 
 
-// ─── ADMIN PRODUCTS DASHBOARD ─────────────────────────────────────────────────
+
 async function loadAdminProducts() {
     const el = document.getElementById('panel-products');
     el.innerHTML = loadingMarkup('Materialising');
@@ -1375,7 +1372,7 @@ async function loadAdminProducts() {
         const list = products.content || [];
         const totalProducts = products.totalElements ?? list.length;
 
-        // compute analytics
+
         const avgPrice = list.length ? list.reduce((s, p) => s + parseFloat(p.price || 0), 0) / list.length : 0;
         const lowStock = list.filter(p => (p.stockQuantity ?? 0) < 5).length;
         const topClicked = [...list].sort((a, b) => (b.totalClicks || 0) - (a.totalClicks || 0)).slice(0, 5);
@@ -1383,7 +1380,7 @@ async function loadAdminProducts() {
         const maxClicks = topClicked[0]?.totalClicks || 1;
         const maxCartAdds = topCartAdds[0]?.totalCartAdds || 1;
 
-        // category breakdown
+
         const catCounts = list.reduce((acc, p) => {
             const key = p.categoryId || 'Uncategorised';
             acc[key] = (acc[key] || 0) + 1;
