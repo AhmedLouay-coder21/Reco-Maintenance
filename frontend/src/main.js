@@ -7,27 +7,100 @@ import {
 } from './components/components.js'
 import { Login } from './pages/login.js'
 import { HomeView } from './pages/home.js'
-import { getUserRole, isAuthenticated, getUserFirstName } from './api/auth.js'
+import { getUserRole, isAuthenticated, getUserFirstName, isTokenValid } from './api/auth.js'
 import { DashboardView } from './pages/dashboard.js'
 import { ProductsView } from './pages/products.js'
 import { ProductView } from './pages/product.js'
 import { PaymentView } from './pages/payment.js'
+import { showToast } from './utils/alert.js'
 
 route()
+
+// Poll notifications and surface new unread ones as toasts.
+function startNotificationPoller(interval = 10000) {
+  let seen = new Set();
+  try {
+    const stored = JSON.parse(localStorage.getItem('seen_notifications') || '[]');
+    stored.forEach(id => seen.add(id));
+  } catch (e) {
+    seen = new Set();
+  }
+
+  async function poll() {
+    if (!isAuthenticated() || !isTokenValid()) return;
+
+    try {
+      const { api } = await import('./api/auth.js');
+      const notifications = await api('/notifications');
+      if (!Array.isArray(notifications)) return;
+
+      const unread = notifications.filter(n => !n.read).slice(0, 10);
+      let changed = false;
+
+      for (const notification of unread.reverse()) {
+        if (!seen.has(notification.id)) {
+          showToast(notification.message || notification.type || 'Notification', 'success');
+          seen.add(notification.id);
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        try {
+          localStorage.setItem('seen_notifications', JSON.stringify([...seen]));
+        } catch (e) {
+
+        }
+      }
+    } catch (e) {
+
+    }
+  }
+
+  poll();
+  return setInterval(poll, interval);
+}
+
+startNotificationPoller();
 
 function route() {
   const path = window.location.pathname
   if (path === '/products') {
-    ProductsView()
-    return
+    ProductsView();
+    return;
   }
   if (path === '/product') {
-    ProductView()
-    return
+    ProductView();
+    return;
   }
   if (path === '/payment') {
-    PaymentView()
-    return
+    PaymentView();
+    return;
+  }
+  if (path === '/dashboard' && isAuthenticated() && isTokenValid())
+  {
+    (isAuthenticated());
+    (isTokenValid());
+    DashboardView();
+    return;
+  }
+  else if (path === '/dashboard' && !isAuthenticated() && !isTokenValid()) 
+  {
+    showToast('Please login to access the dashboard', 'error');
+    (isAuthenticated());
+    (isTokenValid());
+    Login();
+    return;
+  }
+  if (path === '/login' && !isAuthenticated() && !isTokenValid())
+  {
+    Login();
+    return;
+  }
+  else
+  {
+    GenerateMain();
+    return;
   }
   GenerateMain()
 }
@@ -40,6 +113,11 @@ export function GenerateMain()
   })
 })
   document.getElementById('nav-slot').innerHTML = Nav(NAV_LINKS)
+  document.getElementById('loginBtn').addEventListener('click', e => {
+  e.preventDefault();
+  history.pushState({}, '', '/login');
+  Login();
+  });
   document.getElementById('footer-slot').innerHTML = Footer(FOOTER_LINKS)
   
   const loginBtn = document.getElementById('loginBtn');
@@ -49,8 +127,11 @@ export function GenerateMain()
   {
       loginBtn.className = "cart-btn group flex items-center justify-center w-12 h-12 rounded-full border border-line-bright text-line-bright transition-all hover:bg-secondary/10 hover:shadow-[0_0_20px_var(--color-pulse-glow1)]";
       loginBtn.textContent = getUserFirstName()[0].toUpperCase();
-      
-      loginBtn.addEventListener("click", () => {
+      loginBtn.id = "UserIcon";
+
+      loginBtn.addEventListener("click", e => {
+          e.preventDefault();
+          history.pushState({}, '', '/dashboard');
           DashboardView();
       });
   }
@@ -78,7 +159,7 @@ document.querySelectorAll('.ftab').forEach(btn => {
 
     const filter   = btn.dataset.filter
     const filtered = filter === 'all' ? PRODUCTS : PRODUCTS.filter(p => p.tag === filter)
-    productsGrid.innerHTML = filtered.map(p => ProductCard(p)).join('')
+    productsGrid.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[1px] bg-border border border-border">${filtered.products.map(productCard).join('')}</div>`;
     productsGrid.querySelectorAll('.group').forEach(el => obs.observe(el))
   })
 })

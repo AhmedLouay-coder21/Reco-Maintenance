@@ -1,5 +1,6 @@
 import {api, getUserFirstName, getUserRole, isAuthenticated, isTokenValid} from '../api/auth.js';
-
+import { showToast } from '../utils/alert.js';
+import { PaymentView } from './payment.js';
 
 const token = () => localStorage.getItem('auth_token');
 
@@ -47,6 +48,10 @@ export function DashboardView() {
         return;
     }
 
+  if (window.location.pathname !== '/dashboard') {
+    history.pushState({}, '', '/dashboard');
+  }
+
     const role = getUserRole();
     const main = document.querySelector('#app');
     const nav = document.getElementById('nav-slot');
@@ -56,6 +61,18 @@ export function DashboardView() {
 
     main.innerHTML = role === 'ADMIN' ? AdminShell() : CustomerShell();
     role === 'ADMIN' ? bootAdmin() : bootCustomer();
+
+    const dashLogo = document.getElementById('dashLogo');
+    if (dashLogo) {
+      dashLogo.addEventListener('click', () => {
+        if (window.navigate) {
+          window.navigate('/');
+        } else {
+          history.pushState({}, '', '/');
+          window.location.reload();
+        }
+      });
+    }
 }
 
 
@@ -65,7 +82,7 @@ function AdminShell() {
     return `
   <div id="dash-root" class="min-h-screen flex bg-main text-(--color-white) font-josefin">
     <aside class="w-[220px] min-h-screen flex-shrink-0 bg-surface border-r border-border flex flex-col sticky top-0 h-screen overflow-y-auto max-md:w-16">
-      <div class="font-bebas text-[1.6rem] tracking-[0.15em] text-line-bright drop-shadow-[0_0_20px_var(--color-glow)] px-5 pt-7 pb-5 border-b border-border">
+      <div class="font-bebas text-[1.6rem] tracking-[0.15em] text-line-bright drop-shadow-[0_0_20px_var(--color-glow)] px-5 pt-7 pb-5 border-b border-border cursor-pointer" id="dashLogo">
         RECO<span class="block text-[0.65rem] tracking-[0.25em] text-muted mt-0.5 max-md:hidden">Admin Control</span>
       </div>
       <nav class="flex-1 py-4">
@@ -117,7 +134,7 @@ function CustomerShell() {
     return `
   <div id="dash-root" class="min-h-screen flex bg-main text-(--color-white) font-josefin">
     <aside class="w-[220px] min-h-screen flex-shrink-0 bg-surface border-r border-border flex flex-col sticky top-0 h-screen overflow-y-auto max-md:w-16">
-      <div class="font-bebas text-[1.6rem] tracking-[0.15em] text-line-bright drop-shadow-[0_0_20px_var(--color-glow)] px-5 pt-7 pb-5 border-b border-border">
+      <div class="font-bebas text-[1.6rem] tracking-[0.15em] text-line-bright drop-shadow-[0_0_20px_var(--color-glow)] px-5 pt-7 pb-5 border-b border-border cursor-pointer" id="dashLogo">
         RECO<span class="block text-[0.65rem] tracking-[0.25em] text-muted mt-0.5 max-md:hidden">My Channel</span>
       </div>
       <nav class="flex-1 py-4">
@@ -127,6 +144,7 @@ function CustomerShell() {
         <div class="${navItemBaseClass} ${navItemInactiveClass}" data-panel="cart"><span class="text-[1rem] w-4 text-center">▣</span><span class="max-md:hidden">Cart</span></div>
         <div class="${navItemBaseClass} ${navItemInactiveClass}" data-panel="orders"><span class="text-[1rem] w-4 text-center">◈</span><span class="max-md:hidden">My Orders</span></div>
         <div class="${navItemBaseClass} ${navItemInactiveClass}" data-panel="profile"><span class="text-[1rem] w-4 text-center">◑</span><span class="max-md:hidden">Profile</span></div>
+        <div class="${navItemBaseClass} ${navItemInactiveClass}" data-panel="notifications"><span class="text-[1rem] w-4 text-center">◑</span><span class="max-md:hidden">Notifications</span></div>
       </nav>
       <div class="px-5 py-4 border-t border-border">
         <div class="flex items-center gap-2">
@@ -140,12 +158,6 @@ function CustomerShell() {
       </div>
     </aside>
     <div class="flex-1 flex flex-col min-w-0">
-      <div class="h-[60px] border-b border-border bg-surface px-7 flex items-center justify-between sticky top-0 z-50">
-        <div class="font-bebas text-[1.2rem] tracking-[0.2em] text-line-bright" id="topbar-title">Browse</div>
-        <div class="flex items-center gap-3">
-          <span class="text-[0.62rem] tracking-[0.15em] uppercase px-2.5 py-1 border border-secondary text-line-bright bg-secondary/10">Customer</span>
-        </div>
-      </div>
       <div class="flex-1 p-7 max-md:p-4 overflow-y-auto">
         <div id="alert-zone"></div>
         <div id="panel-recs" class="dash-panel"></div>
@@ -153,23 +165,11 @@ function CustomerShell() {
         <div id="panel-orders" class="dash-panel hidden"></div>
         <div id="panel-reviews" class="dash-panel hidden"></div>
         <div id="panel-profile" class="dash-panel hidden"></div>
+        <div id="panel-notifications" class="dash-panel hidden"></div>
       </div>
     </div>
   </div>
   <div id="modal-zone"></div>`;
-}
-
-
-function showAlert(msg, type = 'success') {
-    const zone = document.getElementById('alert-zone');
-    if (!zone) return;
-    const typeClass = type === 'error'
-        ? 'border-red-400/70 bg-red-500/10 text-red-300'
-        : 'border-emerald-400/70 bg-emerald-500/10 text-emerald-300';
-    zone.innerHTML = `<div class="mb-4 border-l-4 px-3 py-2 text-[0.72rem] tracking-[0.1em] ${typeClass}">${msg}</div>`;
-    setTimeout(() => {
-        zone.innerHTML = '';
-    }, 3500);
 }
 
 function openModal(html) {
@@ -332,9 +332,9 @@ function openProductModal(product) {
         <div><label class="${labelClass}">Name</label><input class="${inputClass}" id="mp-name" value="${isEdit ? product.name : ''}"></div>
         <div class="${formRowClass}">
           <div><label class="${labelClass}">Price ($)</label><input class="${inputClass}" id="mp-price" type="number" step="0.01" value="${isEdit ? product.price : ''}"></div>
-          <div><label class="${labelClass}">Stock</label><input class="${inputClass}" id="mp-stock" type="number" value="${isEdit ? product.stock_quantity : ''}"></div>
+          <div><label class="${labelClass}">Stock</label><input class="${inputClass}" id="mp-stock" type="number" value="${isEdit ? product.stockQuantity : ''}"></div>
         </div>
-        <div><label class="${labelClass}">Category ID</label><input class="${inputClass}" id="mp-cat" type="number" value="${isEdit ? product.category_id : ''}"></div>
+        <div><label class="${labelClass}">Category ID</label><input class="${inputClass}" id="mp-cat" type="number" value="${isEdit ? product.categoryId : ''}"></div>
         <div><label class="${labelClass}">Tags (comma-separated)</label><input class="${inputClass}" id="mp-tags" value="${isEdit ? (product.tags || '') : ''}"></div>
         <div><label class="${labelClass}">Description</label><textarea class="${textareaClass}" id="mp-desc">${isEdit ? (product.description || '') : ''}</textarea></div>
       </div>
@@ -356,10 +356,10 @@ function openProductModal(product) {
             if (isEdit) await api(`/products/${product.id}`, {method: 'PUT', body: JSON.stringify(body)});
             else await api('/products', {method: 'POST', body: JSON.stringify(body)});
             closeModal();
-            showAlert(isEdit ? 'Product updated' : 'Product created');
+            showToast(isEdit ? 'Product updated' : 'Product created');
             loadAdminProducts();
         } catch (e) {
-            showAlert(e.message, 'error');
+            showToast(e.message, 'error');
         }
     });
 }
@@ -400,10 +400,10 @@ async function loadAdminCategories() {
                 if (!confirm('Delete category?')) return;
                 try {
                     await api(`/categories/${btn.dataset.delCat}`, {method: 'DELETE'});
-                    showAlert('Category deleted');
+                    showToast('Category deleted');
                     loadAdminCategories();
                 } catch (e) {
-                    showAlert(e.message, 'error');
+                    showToast(e.message, 'error');
                 }
             });
         });
@@ -435,10 +435,10 @@ function openCatModal(cat) {
             if (isEdit) await api(`/categories/${cat.id}`, {method: 'PUT', body: JSON.stringify(body)});
             else await api('/categories', {method: 'POST', body: JSON.stringify(body)});
             closeModal();
-            showAlert(isEdit ? 'Category updated' : 'Category created');
+            showToast(isEdit ? 'Category updated' : 'Category created');
             loadAdminCategories();
         } catch (e) {
-            showAlert(e.message, 'error');
+            showToast(e.message, 'error');
         }
     });
 }
@@ -474,10 +474,10 @@ async function loadAdminUsers() {
                 if (!confirm('Delete this user? This cascades to all their data.')) return;
                 try {
                     await api(`/users/${btn.dataset.delUser}`, {method: 'DELETE'});
-                    showAlert('User deleted');
+                    showToast('User deleted');
                     loadAdminUsers();
                 } catch (e) {
-                    showAlert(e.message, 'error');
+                    showToast(e.message, 'error');
                 }
             });
         });
@@ -517,20 +517,20 @@ async function loadAdminCache() {
         document.getElementById('refreshAllBtn').addEventListener('click', async () => {
             try {
                 const r = await api('/recommendations/refresh', {method: 'POST', body: JSON.stringify({})});
-                showAlert(`Refreshed ${r.users_refreshed} users, ${r.cache_entries_created} entries`);
+                showToast(`Refreshed ${r.users_refreshed} users, ${r.cache_entries_created} entries`);
                 loadAdminCache();
             } catch (e) {
-                showAlert(e.message, 'error');
+                showToast(e.message, 'error');
             }
         });
         el.querySelectorAll('[data-del-cache]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 try {
                     await api(`/recommendations/cache/${btn.dataset.delCache}`, {method: 'DELETE'});
-                    showAlert('Cache entry deleted');
+                    showToast('Cache entry deleted');
                     loadAdminCache();
                 } catch (e) {
-                    showAlert(e.message, 'error');
+                    showToast(e.message, 'error');
                 }
             });
         });
@@ -543,54 +543,13 @@ async function loadAdminCache() {
 function bootCustomer() {
     loadRecs();
     navRouter({
-        browse: loadBrowse,
         recs: loadRecs,
         cart: loadCart,
         orders: loadCustomerOrders,
         reviews: loadMyReviews,
         profile: loadProfile,
+        notifications: loadNotifications,
     });
-}
-
-
-async function loadBrowse() {
-    const el = document.getElementById('panel-browse');
-    el.innerHTML = loadingMarkup('Channelling objects');
-    try {
-        const [prodsData, catsData] = await Promise.all([
-            api('/products'),
-            api('/categories'),
-        ]);
-        const catOptions = catsData.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-        el.innerHTML = `
-      <div class="flex items-center justify-between mb-4">
-        <div class="font-bebas text-[1.1rem] tracking-[0.2em] text-line-bright">Objects from RECO</div>
-        <div class="flex gap-2 items-center">
-          <input class="${inputClass} w-[160px]" id="search-q" placeholder="Search...">
-          <select class="${selectClass} w-[120px]" id="cat-filter"><option value="">All Categories</option>${catOptions}</select>
-          <button class="${btnBaseClass} ${btnMdClass}" id="search-btn">Search</button>
-        </div>
-      </div>
-      <div id="product-grid" class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4"></div>`;
-
-        renderProductGrid(prodsData.products, el);
-
-        document.getElementById('search-btn').addEventListener('click', async () => {
-            const q = document.getElementById('search-q').value.trim();
-            const cat = document.getElementById('cat-filter').value;
-            let url = q ? `/products/search?q=${encodeURIComponent(q)}&limit=24` : `/products${cat ? '&category_id=' + cat : ''}`;
-            const grid = document.getElementById('product-grid');
-            grid.innerHTML = loadingMarkup('Searching');
-            try {
-                const r = await api(url);
-                renderProductGrid(r.products, el);
-            } catch (e) {
-                grid.innerHTML = emptyMarkup(e.message);
-            }
-        });
-    } catch (e) {
-        el.innerHTML = emptyMarkup(e.message);
-    }
 }
 
 function renderProductGrid(products, container) {
@@ -613,13 +572,13 @@ function renderProductGrid(products, container) {
     grid.querySelectorAll('[data-add-cart]').forEach(btn => {
         btn.addEventListener('click', async () => {
             if (!isAuthenticated() || !isTokenValid()) {
-                showAlert('Please log in with a real account to add to cart', 'error');
+                showToast('Please log in with a real account to add to cart', 'error');
                 return;
             }
             try {
                 const productId = Number(btn.dataset.addCart);
                 await api('/cart/items', {method: 'POST', body: JSON.stringify({productId, quantity: 1})});
-                showAlert('Added to cart');
+                showToast('Added to cart');
                 // track interaction
                 api(`/users/${uid}/interactions`, {
                     method: 'POST',
@@ -627,7 +586,7 @@ function renderProductGrid(products, container) {
                 }).catch(() => {
                 });
             } catch (e) {
-                showAlert(e.message, 'error');
+                showToast(e.message, 'error');
             }
         });
     });
@@ -716,14 +675,14 @@ async function openProductDetailModal(productId) {
 
         document.getElementById('modal-add-cart').addEventListener('click', async () => {
             if (!isAuthenticated() || !isTokenValid()) {
-                showAlert('Please log in to add to cart', 'error');
+                showToast('Please log in to add to cart', 'error');
                 return;
             }
             try {
                 await api('/cart/items', {method: 'POST', body: JSON.stringify({productId: prod.id, quantity: 1})});
-                showAlert('Added to cart');
+                showToast('Added to cart');
             } catch (e) {
-                showAlert(e.message, 'error');
+                showToast(e.message, 'error');
             }
         });
 
@@ -731,20 +690,20 @@ async function openProductDetailModal(productId) {
             const rating = parseInt(document.getElementById('review-rating').value);
             const comment = document.getElementById('review-comment').value;
             if (!rating) {
-                showAlert('Please select a rating', 'error');
+                showToast('Please select a rating', 'error');
                 return;
             }
             try {
                 await api(`/products/${prod.id}/reviews`, {method: 'POST', body: JSON.stringify({rating, comment})});
-                showAlert('Review submitted');
+                showToast('Review submitted');
                 closeModal();
             } catch (e) {
-                showAlert(e.message, 'error');
+                showToast(e.message, 'error');
             }
         });
 
     } catch (e) {
-        showAlert(e.message, 'error');
+        showToast(e.message, 'error');
     }
 }
 
@@ -756,7 +715,7 @@ async function loadRecs() {
     const uid = user.id;
     try {
         const [personal, popular] = await Promise.allSettled([
-            uid ? api(`/user/${uid}/recommendations`) : Promise.reject(),
+            uid ? api(`/users/${uid}/recommendations`) : Promise.reject(),
             api('/recommendations/popular'),
         ]);
 
@@ -768,7 +727,7 @@ async function loadRecs() {
         <div class="flex flex-col gap-2.5 mb-7">
           ${d.recommendations.map(r => `
             <div class="flex items-center gap-3 border border-border bg-surface2 p-3 transition-colors hover:border-secondary/40">
-              <div class="font-bebas text-[1.6rem] text-secondary w-[52px] text-center leading-none">${(r.recommendationScore * 100).toFixed(0)}%</div>
+              <div class="font-bebas text-[1.6rem] text-secondary w-[52px] text-center leading-none">${(r.recommendationScore).toFixed(0)}%</div>
               <div class="flex-1">
                 <div class="text-[0.82rem] mb-1">${r.name}</div>
                 <div class="text-line-bright text-[0.8rem]">$${r.price} · <span class="text-secondary text-[0.7rem]">${stars(r.avg_rating)}</span></div>
@@ -799,7 +758,7 @@ async function loadRecs() {
         el.querySelectorAll('[data-add-cart]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 if (!uid) {
-                    showAlert('Login required', 'error');
+                    showToast('Login required', 'error');
                     return;
                 }
                 try {
@@ -813,9 +772,9 @@ async function loadRecs() {
                         method: 'POST',
                         body: JSON.stringify({productId, quantity: 1}),
                     });
-                    showAlert('Added to cart');
+                    showToast('Added to cart');
                 } catch (e) {
-                    showAlert(e.message, 'error');
+                    showToast(e.message, 'error');
                 }
             });
         });
@@ -869,10 +828,10 @@ async function loadCart() {
             if (!confirm('Clear entire cart?')) return;
             try {
                 await api(`/cart/clear`, {method: 'DELETE'});
-                showAlert('Cart cleared');
+                showToast('Cart cleared');
                 loadCart();
             } catch (e) {
-                showAlert(e.message, 'error');
+                showToast(e.message, 'error');
             }
         });
 
@@ -882,7 +841,7 @@ async function loadCart() {
                     await api(`/cart/items/${btn.dataset.removeItem}`, {method: 'DELETE'});
                     loadCart();
                 } catch (e) {
-                    showAlert(e.message, 'error');
+                    showToast(e.message, 'error');
                 }
             });
         });
@@ -897,12 +856,12 @@ async function loadCart() {
                     await api(`/cart/items/${itemId}`, {method: 'PUT', body: JSON.stringify({quantity: newQty})});
                     loadCart();
                 } catch (e) {
-                    showAlert(e.message, 'error');
+                    showToast(e.message, 'error');
                 }
             });
         });
 
-        document.getElementById('checkout-btn').addEventListener('click', () => openCheckout(uid, data.subtotal));
+        document.getElementById('checkout-btn').addEventListener('click', () => PaymentView());
     } catch (e) {
         el.innerHTML = emptyMarkup(e.message);
     }
@@ -937,10 +896,10 @@ function openCheckout(uid, total) {
                 body: JSON.stringify({amount, paymentMethod: document.getElementById('pay-method').value}),
             });
             closeModal();
-            showAlert(`Order #${order.id} placed! Payment: ${payment.status}`);
+            showToast(`Order #${order.id} placed! Payment: ${payment.status}`);
             loadCart();
         } catch (e) {
-            showAlert(e.message, 'error');
+            showToast(e.message, 'error');
         }
     });
 }
@@ -997,7 +956,7 @@ async function loadCustomerOrders() {
               </div>
             </div>`);
                 } catch (e) {
-                    showAlert(e.message, 'error');
+                    showToast(e.message, 'error');
                 }
             });
         });
@@ -1088,10 +1047,10 @@ async function loadMyReviews() {
                             body: JSON.stringify({rating, comment})
                         });
                         closeModal();
-                        showAlert('Review updated');
+                        showToast('Review updated');
                         loadMyReviews();
                     } catch (e) {
-                        showAlert(e.message, 'error');
+                        showToast(e.message, 'error');
                     }
                 });
             });
@@ -1102,10 +1061,10 @@ async function loadMyReviews() {
                 if (!confirm('Delete this review?')) return;
                 try {
                     await api(`/reviews/${btn.dataset.delReview}`, {method: 'DELETE'});
-                    showAlert('Review deleted');
+                    showToast('Review deleted');
                     loadMyReviews();
                 } catch (e) {
-                    showAlert(e.message, 'error');
+                    showToast(e.message, 'error');
                 }
             });
         });
@@ -1149,9 +1108,9 @@ async function loadProfile() {
                         email: document.getElementById('p-email').value
                     })
                 })
-                showAlert('Profile updated');
+                showToast('Profile updated');
             } catch (e) {
-                showAlert(e.message, 'error');
+                showToast(e.message, 'error');
             }
         });
 
@@ -1162,7 +1121,7 @@ async function loadProfile() {
                 ['auth_token', 'firstName', 'lastName', 'role', 'user_id'].forEach(k => localStorage.removeItem(k));
                 window.location.href = '/';
             } catch (e) {
-                showAlert(e.message, 'error');
+                showToast(e.message, 'error');
             }
         });
     } catch (e) {
@@ -1170,41 +1129,155 @@ async function loadProfile() {
     }
 }
 
+async function loadNotifications() {
+    const el = document.getElementById('panel-notifications');
+    el.innerHTML = loadingMarkup('Loading notifications');
+    if (!isAuthenticated() || !isTokenValid()) {
+        el.innerHTML = emptyMarkup('Not logged in');
+        return;
+    }
+    try {
+        const [notificationsResult, unreadResult] = await Promise.all([
+            api('/notifications'),
+            api('/notifications/unread-count'),
+        ]);
+
+        const notifications = Array.isArray(notificationsResult) ? notificationsResult : [];
+        const unreadCount = Number(unreadResult?.count || 0);
+
+        el.innerHTML = `
+      <div class="flex items-center justify-between gap-3 mb-5 max-md:flex-col max-md:items-start">
+        <div>
+          <div class="font-bebas text-[1.1rem] tracking-[0.2em] text-line-bright">Notifications</div>
+          <div class="text-[0.62rem] tracking-[0.18em] uppercase text-muted mt-1">${unreadCount} unread</div>
+        </div>
+        <div class="flex gap-2.5">
+          <button class="${btnBaseClass} ${btnSmClass}" id="notif-refresh">Refresh</button>
+          <button class="${btnBaseClass} ${btnSmClass} ${btnSuccessClass}" id="notif-mark-all" ${unreadCount ? '' : 'disabled style="opacity:.5;cursor:not-allowed"'}>Mark All Read</button>
+        </div>
+      </div>
+      <div class="flex gap-2 mb-5">
+        <button class="${btnBaseClass} ${btnSmClass} ${navItemActiveClass}" id="notif-filter-all">All</button>
+        <button class="${btnBaseClass} ${btnSmClass} ${navItemInactiveClass}" id="notif-filter-unread">Unread</button>
+      </div>
+      <div id="notif-list" class="flex flex-col gap-3"></div>`;
+
+        const listEl = document.getElementById('notif-list');
+        const render = (items) => {
+            if (!items.length) {
+                listEl.innerHTML = emptyMarkup('No notifications yet');
+                return;
+            }
+
+            listEl.innerHTML = items.map(n => {
+                const readClass = n.read
+                    ? 'border-border bg-surface2/60 opacity-75'
+                    : 'border-secondary/40 bg-surface2 shadow-[0_0_18px_rgba(0,0,0,0.12)]';
+                const unreadBadge = n.read ? '' : '<span class="inline-flex items-center px-2 py-0.5 text-[0.55rem] tracking-[0.14em] uppercase border border-secondary/70 text-line-bright bg-secondary/10">New</span>';
+
+                return `
+              <div class="border ${readClass} p-4 transition-colors" data-notification-card="${n.id}">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap mb-2">
+                      <div class="font-bebas text-[0.95rem] tracking-[0.16em] text-line-bright">${n.type || 'Notification'}</div>
+                      ${unreadBadge}
+                      ${statusPill(n.orderStatus || '—')}
+                    </div>
+                    <div class="text-[0.82rem] leading-relaxed text-(--color-white)">${n.message}</div>
+                    <div class="text-[0.6rem] tracking-[0.16em] uppercase text-muted mt-2">
+                      ${fmtDate(n.createdAt)}${n.orderId ? ` · Order #${n.orderId}` : ''}
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 shrink-0">
+                    ${!n.read ? `<button class="${btnBaseClass} ${btnSmClass}" data-mark-read="${n.id}">Mark Read</button>` : ''}
+                  </div>
+                </div>
+              </div>`;
+            }).join('');
+
+            listEl.querySelectorAll('[data-mark-read]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    try {
+                        await api(`/notifications/${btn.dataset.markRead}/read`, {method: 'PUT'});
+                        loadNotifications();
+                    } catch (e) {
+                        showToast(e.message, 'error');
+                    }
+                });
+            });
+        };
+
+        const unreadItems = notifications.filter(n => !n.read);
+        const allBtn = document.getElementById('notif-filter-all');
+        const unreadBtn = document.getElementById('notif-filter-unread');
+        const setFilterState = (showUnreadOnly) => {
+            if (showUnreadOnly) {
+                allBtn.className = `${btnBaseClass} ${btnSmClass} ${navItemInactiveClass}`;
+                unreadBtn.className = `${btnBaseClass} ${btnSmClass} ${navItemActiveClass}`;
+                render(unreadItems);
+            } else {
+                allBtn.className = `${btnBaseClass} ${btnSmClass} ${navItemActiveClass}`;
+                unreadBtn.className = `${btnBaseClass} ${btnSmClass} ${navItemInactiveClass}`;
+                render(notifications);
+            }
+        };
+
+        allBtn.addEventListener('click', () => setFilterState(false));
+        unreadBtn.addEventListener('click', () => setFilterState(true));
+
+        document.getElementById('notif-refresh').addEventListener('click', loadNotifications);
+        document.getElementById('notif-mark-all').addEventListener('click', async () => {
+            if (!unreadCount) return;
+            try {
+                await api('/notifications/read-all', {method: 'PUT'});
+                loadNotifications();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        });
+
+        setFilterState(false);
+    } catch (e) {
+        el.innerHTML = emptyMarkup(e.message);
+    }
+}
 
 async function loadAdminOrders() {
     const el = document.getElementById('panel-orders');
     el.innerHTML = loadingMarkup('Loading orders');
+    const products = await api('/orders/total');
 
     el.innerHTML = `
     <div class="mb-6 grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
       <div class="relative overflow-hidden border border-border bg-surface2 p-5">
         <div class="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-secondary to-transparent opacity-60"></div>
         <div class="absolute top-4 right-4 text-xl opacity-15">▣</div>
-        <div class="font-bebas text-[2.4rem] text-line-bright leading-none" id="od-total">—</div>
+        <div class="font-bebas text-[2.4rem] text-line-bright leading-none" id="od-total">${products.content.length}</div>
         <div class="text-[0.62rem] tracking-[0.2em] uppercase text-muted mt-1">Total Orders</div>
       </div>
       <div class="relative overflow-hidden border border-border bg-surface2 p-5">
         <div class="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-secondary to-transparent opacity-60"></div>
         <div class="absolute top-4 right-4 text-xl opacity-15">$</div>
-        <div class="font-bebas text-[2.4rem] text-line-bright leading-none" id="od-revenue">—</div>
+        <div class="font-bebas text-[2.4rem] text-line-bright leading-none" id="od-revenue">${products.content.length}</div>
         <div class="text-[0.62rem] tracking-[0.2em] uppercase text-muted mt-1">Revenue</div>
       </div>
       <div class="relative overflow-hidden border border-border bg-surface2 p-5">
         <div class="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-40"></div>
         <div class="absolute top-4 right-4 text-xl opacity-15">✓</div>
-        <div class="font-bebas text-[2.4rem] text-emerald-300 leading-none" id="od-completed">—</div>
+        <div class="font-bebas text-[2.4rem] text-emerald-300 leading-none" id="od-completed">${products.content.length}</div>
         <div class="text-[0.62rem] tracking-[0.2em] uppercase text-muted mt-1">Completed</div>
       </div>
       <div class="relative overflow-hidden border border-border bg-surface2 p-5">
         <div class="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-yellow-400 to-transparent opacity-40"></div>
         <div class="absolute top-4 right-4 text-xl opacity-15">◌</div>
-        <div class="font-bebas text-[2.4rem] text-yellow-300 leading-none" id="od-pending">—</div>
+        <div class="font-bebas text-[2.4rem] text-yellow-300 leading-none" id="od-pending">${products.content.length}</div>
         <div class="text-[0.62rem] tracking-[0.2em] uppercase text-muted mt-1">Pending</div>
       </div>
       <div class="relative overflow-hidden border border-border bg-surface2 p-5">
         <div class="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-red-400 to-transparent opacity-40"></div>
         <div class="absolute top-4 right-4 text-xl opacity-15">✕</div>
-        <div class="font-bebas text-[2.4rem] text-red-300 leading-none" id="od-cancelled">—</div>
+        <div class="font-bebas text-[2.4rem] text-red-300 leading-none" id="od-cancelled">${products.content.length}</div>
         <div class="text-[0.62rem] tracking-[0.2em] uppercase text-muted mt-1">Cancelled</div>
       </div>
     </div>
@@ -1349,10 +1422,10 @@ async function loadAdminOrders() {
                             method: 'PUT',
                             body: JSON.stringify({status: sel.value})
                         });
-                        showAlert('Order status updated');
+                        showToast('Order status updated');
                         document.getElementById('order-search-btn').click();
                     } catch (e) {
-                        showAlert(e.message, 'error');
+                        showToast(e.message, 'error');
                     }
                 });
             });
@@ -1538,10 +1611,10 @@ async function loadAdminProducts() {
                 if (!confirm('Delete product?')) return;
                 try {
                     await api(`/products/${btn.dataset.delProduct}`, {method: 'DELETE'});
-                    showAlert('Product deleted');
+                    showToast('Product deleted');
                     loadAdminProducts();
                 } catch (e) {
-                    showAlert(e.message, 'error');
+                    showToast(e.message, 'error');
                 }
             });
         });
