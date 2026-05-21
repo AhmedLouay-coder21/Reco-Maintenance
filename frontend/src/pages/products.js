@@ -385,7 +385,7 @@ export function productCard(p) {
 
     return `
     <div class="product-reveal bg-main group overflow-hidden transition-colors duration-500 hover:bg-surface relative"
-         data-product-id="${p.id}">
+         data-product-id="${p.id || p.productId}">
 
       <!-- image zone -->
       <div class="card-click-area h-72 relative overflow-hidden flex items-center justify-center bg-surface cursor-pointer"
@@ -583,13 +583,13 @@ export async function addToCart(product) {
         showToast('Please log in to use the cart');
         return;
     }
-    if (!product || !product.id) {
+    if (!product || !product.id && !product.productId) {
         showToast('Product not available');
         return;
     }
 
     const body = {
-        productId: product.id,
+        productId: product.id || product.productId,
         quantity: 1,
     };
 
@@ -598,9 +598,8 @@ export async function addToCart(product) {
     try {
         api(`/users/${userId}/interactions`, {
             method: 'POST',
-            body: JSON.stringify({productId: product.id, interactionType: 'CART_ADD'})
-        }).catch(() => {
-        });
+            body: JSON.stringify({productId: product.id || product.productId, interactionType: 'CART_ADD'})
+        }).catch(() => {});
         const cartResponse = await api('/cart/items', {method: 'POST', body: JSON.stringify(body)});
         applyCart(cartResponse);
         showToast(`${product.name} added to cart`);

@@ -164,7 +164,6 @@ async function loadTopProducts() {
 
     const data = await api(`/recommendations/popular`)
     const topProducts = data.recommendations || []
-    console.log(topProducts);
 
     if (!topProducts.length) {
       container.innerHTML = `
@@ -194,8 +193,7 @@ async function loadTopProducts() {
 function bindTopProductCards(container, topProducts) {
   container.querySelectorAll('[data-product-id]').forEach(card => {
     const id = Number(card.dataset.productId)
-    const product = topProducts.find(item => item.id === id)
-
+    const product = topProducts.find(item => item.productId === id)
     card.querySelector('.btn-cart')?.addEventListener('click', event => {
       event.stopPropagation()
       addToCart(product)
