@@ -4,7 +4,7 @@ import { Login } from '../pages/login.js';
 const localStorageTheme = localStorage.getItem("theme");
 const systemSettingDark = window.matchMedia("(prefers-color-scheme: dark)");
 
-//Theme toggle through looking at the local storage
+// Determine initial theme but the localStorage overrides system preference
 function calculateSettingAsThemeString({ localStorageTheme, systemSettingDark }) {
   if (localStorageTheme !== null) {
     return localStorageTheme;
@@ -19,6 +19,32 @@ function calculateSettingAsThemeString({ localStorageTheme, systemSettingDark })
 
 
 let currentThemeSetting = calculateSettingAsThemeString({ localStorageTheme, systemSettingDark });
+
+function applyTheme(theme) {
+  if (theme === 'dark') {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
+}
+
+// expose toggleTheme globally so the inline onclick in Nav() can call it
+window.toggleTheme = function toggleTheme() {
+  const isNowDark = document.documentElement.classList.toggle('dark')
+  const newTheme = isNowDark ? 'dark' : 'light'
+  try { localStorage.setItem('theme', newTheme) } catch (e) {  }
+  currentThemeSetting = newTheme
+}
+
+// apply initial theme on load
+applyTheme(currentThemeSetting)
+
+// if user hasn't picked a theme then keep in sync with system changes
+if (localStorageTheme === null) {
+  systemSettingDark.addEventListener('change', e => {
+    applyTheme(e.matches ? 'dark' : 'light')
+  })
+}
 
 
 const navLinkClass = 'text-[0.72rem] font-semibold tracking-[0.2em] uppercase text-muted hover:text-line-bright transition-all duration-300 hover:drop-shadow-[0_0_12px_var(--color-cursor-ring)]'
@@ -38,7 +64,7 @@ export function Nav(links, currentPath = '/' , Login) {
         <button id="loginBtn" class="cart-btn group flex items-center gap-2 px-5 py-2 border border-secondary/50 rounded-sm text-[0.72rem] font-semibold tracking-widest uppercase text-line-bright transition-all hover:bg-secondary/10 hover:shadow-[0_0_20px_var(--color-pulse-glow1)]">
           ⬡ Login
         </button>
-        <button onclick="document.documentElement.classList.toggle('dark')"
+        <button onclick="toggleTheme()"
             class="h-12 w-12 rounded-lg p-2 hover:bg-secondary/10 transition-all flex items-center justify-center">
           
           <svg class="fill-violet-700 block dark:hidden w-6 h-6" viewBox="0 0 20 20">
