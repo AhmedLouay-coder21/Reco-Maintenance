@@ -371,7 +371,7 @@ function emptyState() {
     </div>`;
 }
 
-function productCard(p) {
+export function productCard(p) {
     const rating = parseFloat(p.avgRating) || 0;
     const stars = '★★★★★'.split('').map((s, i) =>
         `<span class="${i < Math.round(rating) ? 'text-secondary' : 'text-border'} text-xs drop-shadow-[0_0_6px_#9b59f7]">${s}</span>`
