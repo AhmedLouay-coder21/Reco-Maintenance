@@ -184,7 +184,7 @@ hr {
 }
 .scroll-line-anim { animation: scrollPulse 2s ease-in-out infinite; }
 
-#loginBox1 {
+#loginBox {
   transition: transform 2s ease;
 }
 #textTitle {

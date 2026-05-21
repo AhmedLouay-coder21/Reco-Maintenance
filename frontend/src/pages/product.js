@@ -1,7 +1,7 @@
 import { api, getUserFirstName, isAuthenticated, isTokenValid } from '../api/auth.js';
 import { Login } from './login.js';
 import { DashboardView } from './dashboard.js';
-
+import { showToast } from '../utils/alert.js';
 const state = {
   productId: null,
   product: null,
@@ -343,7 +343,7 @@ async function submitReview() {
   const comment = document.getElementById('review-comment')?.value || '';
 
   if (!rating) {
-    showAlert('Please select a rating first.', 'error');
+    showToast('Please select a rating first.', 'error');
     return;
   }
 
@@ -353,14 +353,14 @@ async function submitReview() {
       body: JSON.stringify({ productId: state.productId, rating, comment }),
     });
 
-    showAlert('Review sent. Thank you!');
+    showToast('Review sent. Thank you!');
     document.getElementById('review-comment').value = '';
     document.getElementById('review-rating').value = '0';
     state.reviews = [];
     state.reviewPage = 0;
     await loadReviews(true);
   } catch (err) {
-    showAlert(err?.message || 'Failed to submit review', 'error');
+    showToast(err?.message || 'Failed to submit review', 'error');
   }
 }
 
@@ -401,7 +401,7 @@ function renderFrequentlyBought() {
           <div class="border border-border bg-surface2/40 hover:border-secondary/50 transition-colors flex flex-col justify-between p-4 group">
             <div>
               <div class="relative h-40 w-full bg-surface2 mb-4 overflow-hidden border border-border/40">
-                ${img}
+                <a href="/product?id=${item.id}"> ${img} </a>
                 <div class="absolute inset-0 bg-gradient-to-t from-main/60 to-transparent pointer-events-none"></div>
               </div>
               <a href="/product?id=${item.id}" class="block text-[0.82rem] font-semibold text-line-bright hover:text-secondary transition-colors mb-1 truncate">${item.name}</a>
@@ -435,27 +435,16 @@ function renderFrequentlyBought() {
 
 async function addToCart(product) {
   if (!isAuthenticated() || !isTokenValid()) {
-    showAlert('Please log in to add items to cart', 'error');
+    showToast('Please log in to add items to cart', 'error');
     return;
   }
 
   try {
     await api('/cart/items', { method: 'POST', body: JSON.stringify({ productId: product.id, quantity: 1 }) });
-    showAlert('Added to cart');
+    showToast('Added to cart');
   } catch (err) {
-    showAlert(err?.message || 'Failed to add item', 'error');
+    showToast(err?.message || 'Failed to add item', 'error');
   }
-}
-
-function showAlert(message, type = 'success') {
-  const zone = document.getElementById('product-alert');
-  if (!zone) return;
-  const style = type === 'error'
-    ? 'border-red-400/70 bg-red-500/10 text-red-300'
-    : 'border-emerald-400/70 bg-emerald-500/10 text-emerald-300';
-
-  zone.innerHTML = `<div class="mb-4 border-l-4 px-3 py-2 text-[0.72rem] tracking-[0.1em] ${style}">${message}</div>`;
-  setTimeout(() => { zone.innerHTML = ''; }, 3200);
 }
 
 function renderStars(avg) {

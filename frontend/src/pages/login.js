@@ -1,41 +1,37 @@
 import { login, register } from '../api/auth.js';
+import { showToast } from '../utils/alert.js';
+
 let diagonalLineDir = 0;
 let textPos = 0;
 let titlePos = 0;
 
 
-export function Login()
+export function Login(e)
 {
+    e?.preventDefault();
+
     const main = document.querySelector("main");
     if (!main) return;
 
     const nav = document.getElementById("nav-slot");
-    nav.innerHTML = "";
-
+    if (nav) nav.innerHTML = "";
     main.innerHTML = "";
 
     const footer = document.getElementById("footer-slot");
     if (footer) footer.innerHTML = "";
 
-
-
-    const loginBox = document.createElement("div");
-    loginBox.id = "loginBox";
-
-    loginBox.className =
-        "absolute inset-0 animate-aurora bg-aurora-gradient bg-[length:300%_200%] z-0";
-
-    const loginBox1 = GenerateLoginForm();
-    const loginForm = loginBox1.querySelector("#loginForm");
+    const loginBox = GenerateLoginForm();
+    const loginForm = loginBox.querySelector("#loginForm");
     loginForm.addEventListener("submit", handleLoginSubmit);
 
-    const signUpButton = loginBox1.querySelector("#signupBtn");
+    const signUpButton = loginBox.querySelector("#signupBtn");
     signUpButton.addEventListener("click", () => {
         SignUp()
     });
 
-    loginBox1.className =
+    loginBox.className =
         "relative z-10 w-[560px] h-[760px] bg-transparent backdrop-blur-xs mt-50 rounded-lg flex flex-col items-start";
+        
 
     const diagonalLine = document.createElement("div");
     diagonalLine.id = "diagonalLine";
@@ -69,8 +65,7 @@ export function Login()
         </h1>
         `;
     
-    wrapper.appendChild(loginBox1);
-    main.appendChild(loginBox);
+    wrapper.appendChild(loginBox);
     main.appendChild(wrapper);
     main.appendChild(diagonalLine);
     main.appendChild(title);
@@ -104,7 +99,7 @@ function SignUp()
 }
 function BackToLogin()
 {
-    const logInBox = document.getElementById('loginBox1');
+    const logInBox = document.getElementById('loginBox');
 
     const textTitle = document.getElementById('textTitle');
     const diagonalLine = document.getElementById('diagonalLine');
@@ -134,9 +129,9 @@ function BackToLogin()
 }
 function GenerateLoginForm()
 {
-    const loginBox1 = document.createElement("div");
-    loginBox1.id = "loginBox1";
-    loginBox1.innerHTML = `<div class = "ml-10 mt-10 text-4xl text-(--color-text-dif)"> Welcome back </div>
+    const loginBox = document.createElement("div");
+    loginBox.id = "loginBox";
+    loginBox.innerHTML = `<div class = "ml-10 mt-10 text-4xl text-(--color-text-dif)"> Welcome back </div>
         <div class = "ml-12 mt-5 text-xl text-(--color-text-dif)"> Login to your account </div>
         <form id = "loginForm">
             <div id = "entryFields" class=" m-10 flex flex-col w-[150%]">
@@ -153,7 +148,7 @@ function GenerateLoginForm()
 
                     <div class="relative z-10 flex items-center gap-4 w-50">
                         <div class="flex-1 text-left">
-                            <p id = "loginBtnText" class="text-center text-[#fff] font-bold text-lg group-hover:text-(--color-line-bright) transition-colors duration-300 drop-shadow-sm">
+                            <p id = "loginSubmitText" class="text-center text-[#fff] font-bold text-lg group-hover:text-(--color-line-bright) transition-colors duration-300 drop-shadow-sm">
                             LOG IN
                             </p>
                         </div>
@@ -161,16 +156,16 @@ function GenerateLoginForm()
                 </button>
             </div>
             <button type="button" id="signupBtn" class="text-center text-(--color-main) text-(--color-secondary) hover:text-(--color-text-dif) transition-colors duration-300 cursor-pointer mt-2">
-                create new account
+                Create New Account
             </button>
         </form>
         `;
-    return loginBox1;
+    return loginBox;
 }
 
 function GenerateSignUpForm()
 {
-    const signUpBox = document.getElementById('loginBox1');
+    const signUpBox = document.getElementById('loginBox');
     signUpBox.innerHTML = `<div class = "ml-10 mt-10 text-4xl text-(--color-text-dif)"> Create new account </div>
         <div class = "ml-12 mt-5 text-xl text-(--color-text-dif)"> Join us now </div>
         <form id="signupForm" m-20>
@@ -200,8 +195,8 @@ function GenerateSignUpForm()
 
                     <div class="relative z-10 flex items-center gap-4 w-50">
                         <div class="flex-1 text-left">
-                            <p class="text-center text-[#fff] font-bold text-lg group-hover:text-(--color-line-bright) transition-colors duration-300 drop-shadow-sm">
-                            CREATE ACCOUNT
+                            <p id = "signupSubmitText" class="text-center text-[#fff] font-bold text-lg group-hover:text-(--color-line-bright) transition-colors duration-300 drop-shadow-sm">
+                            Sign Up
                             </p>
                         </div>
                     </div>
@@ -214,9 +209,9 @@ function GenerateSignUpForm()
         return signUpBox;
 }
 
-function setupSignupValidation(loginBox1) 
+function setupSignupValidation(signUpBox)
 {
-    const signupForm = loginBox1.querySelector("#signupForm");
+    const signupForm = signUpBox.querySelector("#signupForm");
 
     signupForm.addEventListener("submit", handleSignupSubmit);
 }
@@ -238,13 +233,59 @@ async function handleSignupSubmit(e)
     const validation = validatePassword(password, passwordCheck);
 
     if (!validation.valid) {
-        alert(validation.message);
+        showToast(validation.message , 'error');
         return;
     }
 
-    await register({firstName, lastName, username, email, password});
-    window.location.href = '/';
-    alert("Account created successfully!");
+    const btnText = document.querySelector("#signupSubmitText");
+    const submitBtn = document.querySelector("#signupSubmitBtn");
+    try
+    {
+        btnText.innerText = "VERIFYING...";
+        submitBtn.disabled = true;
+        await register({firstName, lastName, username, email, password});
+        showToast("Account created successfully!");
+        setTimeout(() => { window.location.href = '/'; }, 2500);
+    }
+    
+    catch (err)
+    {
+        showToast(err?.message || 'Registration failed' , 'error');
+    }
+
+    finally
+    {
+        btnText.innerText = "Sign Up";
+        submitBtn.disabled = false;
+    }
+}
+
+async function handleLoginSubmit(e)
+{
+    e.preventDefault();
+    const email = document.querySelector("#email").value;
+    const password = document.querySelector("#password").value;
+    const btnText = document.querySelector("#loginSubmitText");
+    const submitBtn = document.querySelector("#loginSubmitBtn");
+
+    try
+    {
+        btnText.innerText = "VERIFYING...";
+        submitBtn.disabled = true;
+        await login({ email, password });
+        window.location.href = '/';
+    }
+
+    catch (error)
+    {
+        showToast("Login Failed: " , 'error');
+    }
+    
+    finally
+    {
+        btnText.innerText = "LOG IN";
+        submitBtn.disabled = false;
+    }
 }
 
 function validatePassword(password, passwordCheck) {
@@ -265,32 +306,4 @@ function validatePassword(password, passwordCheck) {
         valid: true,
         message: ""
     };
-}
-async function handleLoginSubmit(e)
-{
-    e.preventDefault();
-    const email = document.querySelector("#email").value;
-    const password = document.querySelector("#password").value;
-    const btnText = document.querySelector("#loginBtnText");
-    const submitBtn = document.querySelector("#loginSubmitBtn");
-
-    try
-    {
-        btnText.innerText = "VERIFYING...";
-        submitBtn.disabled = true;
-   
-        await login({ email, password });
-        window.location.href = '/';
-    }
-
-    catch (error)
-    {
-        alert("Login Failed: " + error.message);
-    }
-    
-    finally
-    {
-        btnText.innerText = "LOG IN";
-        submitBtn.disabled = false;
-    }
 }
