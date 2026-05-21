@@ -20,5 +20,6 @@ public class FrequentlyBoughtTogetherResponse {
     private long frequency;
     private long purchaseCount;
     private BigDecimal avgRating;
+    private String mainImageUrl;
 
 }

@@ -294,6 +294,7 @@ public class RecommendationService {
                     .frequency(frequency)
                     .purchaseCount(purchaseCount)
                     .avgRating(related.getAvgRating())
+                    .mainImageUrl(related.getMainImageUrl())
                     .build());
         }
         return Map.of("productId", productId, "frequentlyBoughtTogether", items);
