@@ -25,6 +25,10 @@ export const register = async (creds) => {
         body: JSON.stringify(creds)
     });
     const data = await res.json();
+    if (!res.ok)
+    {
+        throw new Error(data.message || "Registration failed");
+    }
     localStorage.setItem("id", data.id);
     localStorage.setItem("auth_token", data.accessToken);
     localStorage.setItem("firstName", data.firstName);
