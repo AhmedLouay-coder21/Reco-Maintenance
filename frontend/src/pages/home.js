@@ -1,16 +1,21 @@
 import {
   MARQUEE_ITEMS, FEATURES,
-  STATS, TESTIMONIALS,
-  PRODUCTS
+  STATS, TESTIMONIALS
 } from '../data/data.js'
 import {
   Marquee, FeatureCard,
-  StatCard, TestimonialFeatured, TestimonialCard,
-  GlowLine, ProductCard
+  StatCard, TestimonialFeatured, TestimonialCard
 } from '../components/components.js'
+import { api } from '../api/auth.js'
+import { showToast } from '../utils/alert.js'
+import { addToCart, bindEvents, fetchCategories, goToProduct, loadCart, productCard, skeletonGrid } from './products.js'
 
 export function HomeView() {
   const [featured, ...rest] = TESTIMONIALS
+
+  setTimeout(() => {
+    void initHomePage()
+  }, 0)
 
   return `
     <!-- HERO -->
@@ -46,31 +51,65 @@ export function HomeView() {
       ${FEATURES.map((f, i) => FeatureCard(f, i === FEATURES.length - 1)).join('')}
     </div>
     <hr>
-    
-    <!-- PRODUCTS -->
-    <section id="products" class="px-6 lg:px-20 py-28 relative z-10 bg-linear-to-t from-main to-test-color">
-      <div class="reveal flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
-        <div>
-          <div class="flex items-center gap-4 font-space text-[0.62rem] tracking-[0.3em] uppercase text-secondary mb-3">
-            <span class="w-8 h-[1px] bg-gradient-to-r from-transparent to-secondary"></span> Current Transmission
-          </div>
-          <h2 class="font-bebas text-5xl lg:text-7xl tracking-wider leading-none">
-            OBJECTS <span class="text-line-bright drop-shadow-[0_0_30px_rgba(155,89,247,0.4)]">FROM</span><br>RECO
-          </h2>
-        </div>
-        <div id="categories" class="flex gap-2">
-          <button class="ftab px-4 py-1.5 border border-secondary text-[0.7rem] uppercase tracking-widest text-line-bright bg-secondary/10" data-filter="all">All</button>
-          <button class="ftab px-4 py-1.5 border border-border text-[0.7rem] uppercase tracking-widest text-muted" data-filter="ritual">Ritual</button>
-          <button class="ftab px-4 py-1.5 border border-border text-[0.7rem] uppercase tracking-widest text-muted" data-filter="form">Form</button>
-          <button class="ftab px-4 py-1.5 border border-border text-[0.7rem] uppercase tracking-widest text-muted" data-filter="signal">Signal</button>
-        </div>
+
+    <!-- TOP PRODUCTS -->
+    <section class="px-6 lg:px-20 py-16 relative z-10">
+      <div class="reveal mb-10 flex flex-col gap-3">
+        <div class="font-space text-[0.62rem] tracking-[0.3em] uppercase text-secondary">Top Transmissions</div>
+        <h2 class="font-bebas text-4xl lg:text-6xl tracking-wider text-line-bright">
+          Trending Products
+        </h2>
       </div>
-      <div class="reveal grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[1px] bg-border border border-border" id="products-grid">
-        ${PRODUCTS.map(p => ProductCard(p)).join('')}
+      <div id="top-products-container" class="reveal">
+        ${skeletonGrid()}
       </div>
     </section>
-    ${GlowLine()}
 
+    <!-- PRODUCT DETAIL DRAWER -->
+    <div id="detail-overlay" class="fixed inset-0 z-[200] pointer-events-none">
+      <!-- backdrop -->
+      <div id="detail-backdrop" class="absolute inset-0 bg-main/0 backdrop-blur-none transition-all duration-500"></div>
+      <!-- drawer -->
+      <div id="detail-drawer"
+           class="absolute top-0 right-0 h-full w-full max-w-[520px] bg-surface border-l border-border
+                  translate-x-full transition-transform duration-500 ease-[cubic-bezier(.16,1,.3,1)]
+                  flex flex-col overflow-hidden">
+        <div id="detail-content" class="flex flex-col h-full overflow-y-auto"></div>
+      </div>
+    </div>
+
+    <!-- CART TOAST -->
+    <div id="cart-toast" class="fixed top-25 right-6 z-[300] pointer-events-none opacity-0 transition-all duration-500" style="transform: translateX(150%)">
+      <div class="flex items-center gap-3 bg-surface border border-secondary/60 px-5 py-3 shadow-[0_0_30px_rgba(155,89,247,.25)]">
+        <span class="text-secondary">⬡</span>
+        <span id="cart-toast-msg" class="font-josefin text-[0.72rem] tracking-[0.15em] uppercase text-(--color-white)"></span>
+      </div>
+    </div>
+
+    <!-- floating cart button -->
+    <button id="cart-fab"
+      class="fixed bottom-8 right-8 z-[150] w-14 h-14 rounded-full border-2 border-secondary bg-main/80 backdrop-blur-lg
+             flex items-center justify-center text-xl text-line-bright
+             shadow-[0_0_20px_rgba(155,89,247,.3)] hover:shadow-[0_0_40px_rgba(155,89,247,.5)] hover:scale-110
+             transition-all duration-300 group">
+      ⬡
+      <span id="cart-badge"
+        class="absolute -top-1 -right-1 min-w-[20px] h-5 rounded-full bg-secondary text-white font-bold text-[0.6rem] flex items-center justify-center px-1 hidden">
+        0
+      </span>
+    </button>
+
+    <!-- CART SIDEBAR -->
+    <div id="cart-overlay" class="fixed inset-0 z-[200] pointer-events-none">
+      <div id="cart-backdrop" class="absolute inset-0 bg-main/0 backdrop-blur-none transition-all duration-500"></div>
+      <div id="cart-drawer"
+           class="absolute top-0 right-0 h-full w-full max-w-[400px] bg-surface border-l border-border
+                  translate-x-full transition-transform duration-500 ease-[cubic-bezier(.16,1,.3,1)]
+                  flex flex-col overflow-hidden">
+        <div id="cart-content" class="flex flex-col h-full"></div>
+      </div>
+    </div>
+  
     <!-- STATS -->
     <div class="reveal max-w-[90%] mx-auto my-20 grid grid-cols-2 lg:grid-cols-4 border border-border relative z-10">
       ${STATS.map((s, i) => StatCard(s, i === STATS.length - 1)).join('')}
@@ -92,4 +131,82 @@ export function HomeView() {
       </div>
     </section>
   `
+}
+
+async function initHomePage() {
+  await Promise.all([fetchCategories(), loadCart()])
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('vis')
+    })
+  }, { threshold: 0.1 })
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el))
+
+  await loadTopProducts()
+  bindEvents()
+}
+
+async function loadTopProducts() {
+  const container = document.getElementById('top-products-container')
+  if (!container) return
+
+  container.innerHTML = skeletonGrid()
+
+  try {
+    const params = new URLSearchParams({
+      page: '0',
+      limit: '4',
+      sort: 'popularityScore',
+      order: 'desc',
+    })
+
+    const data = await api(`/recommendations/popular`)
+    const topProducts = data.recommendations || []
+    console.log(topProducts);
+
+    if (!topProducts.length) {
+      container.innerHTML = `
+        <div class="border border-border bg-surface p-12 text-center">
+          <div class="font-bebas text-4xl tracking-wider text-muted mb-2">NO TOP PRODUCTS</div>
+          <p class="text-[0.72rem] tracking-[0.2em] uppercase text-muted">The catalog has no objects to highlight yet.</p>
+        </div>`
+      return
+    }
+
+    container.innerHTML = `
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[1px] bg-border border border-border">
+        ${topProducts.map(productCard).join('')}
+      </div>`
+
+    bindTopProductCards(container, topProducts)
+  } catch (err) {
+    container.innerHTML = `
+      <div class="border border-red-400/20 bg-red-500/5 p-10 text-center">
+        <div class="font-bebas text-4xl text-red-300 mb-2">SIGNAL LOST</div>
+        <p class="text-[0.72rem] tracking-[0.2em] uppercase text-muted">${err?.message || 'Failed to load top products'}</p>
+      </div>`
+    showToast(err?.message || 'Failed to load top products', 'error')
+  }
+}
+
+function bindTopProductCards(container, topProducts) {
+  container.querySelectorAll('[data-product-id]').forEach(card => {
+    const id = Number(card.dataset.productId)
+    const product = topProducts.find(item => item.id === id)
+
+    card.querySelector('.btn-cart')?.addEventListener('click', event => {
+      event.stopPropagation()
+      addToCart(product)
+    })
+
+    card.querySelector('.card-click-area')?.addEventListener('click', () => goToProduct(id))
+  })
+
+  requestAnimationFrame(() => {
+    container.querySelectorAll('.product-reveal').forEach((element, index) => {
+      setTimeout(() => element.classList.add('product-reveal--vis'), index * 40)
+    })
+  })
 }

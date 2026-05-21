@@ -193,16 +193,20 @@ public class RecommendationService {
     @Transactional(readOnly = true)
     public TrendingListResponse getTrending() {
         List<Product> products = productRepository.
-                findTop10ByOrderByPopularityScoreDesc();
+                findTop12ByOrderByPopularityScoreDesc();
         List<TrendingItemResponse> items = new ArrayList<>();
         int rank = 1;
         for (Product p : products) {
             items.add(TrendingItemResponse.builder()
                     .productId(p.getId())
+                    .categoryId(p.getCategory().getId())
                     .name(p.getName())
                     .price(p.getPrice())
                     .popularityScore(p.getPopularityScore())
                     .rank(rank++)
+                    .mainImageUrl(p.getMainImageUrl())
+                    .tags(p.getTags())
+                    .avgRating(p.getAvgRating())
                     .build());
         }
         return new TrendingListResponse(items);

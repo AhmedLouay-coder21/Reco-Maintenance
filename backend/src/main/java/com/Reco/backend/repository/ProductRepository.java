@@ -38,6 +38,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     Optional<Product> findByName(String name);
 
-    List<Product> findTop10ByOrderByPopularityScoreDesc();
+    List<Product> findTop12ByOrderByPopularityScoreDesc();
 
 }

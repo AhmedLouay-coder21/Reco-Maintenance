@@ -166,6 +166,7 @@ public class CartService {
                     return new CartItemResponse(
                             item.getProduct().getId(),
                             item.getProduct().getName(),
+                            item.getProduct().getMainImageUrl(),
                             item.getProduct().getPrice(),
                             item.getQuantity(),
                             lineTotal

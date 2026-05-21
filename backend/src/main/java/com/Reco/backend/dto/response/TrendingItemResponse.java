@@ -15,9 +15,12 @@ import java.math.BigDecimal;
 public class TrendingItemResponse {
 
     private Long productId;
+    private Long categoryId;
     private String name;
     private BigDecimal price;
     private BigDecimal popularityScore;
     private int rank;
-
+    private String mainImageUrl;
+    private String tags;
+    private BigDecimal avgRating;
 }

@@ -1,6 +1,7 @@
-import {api, getUserFirstName, isAuthenticated, isTokenValid} from '../api/auth.js'
-import {Login} from './login.js';
-import {DashboardView} from './dashboard.js';
+import { api, getUserFirstName, isAuthenticated, isTokenValid } from '../api/auth.js'
+import { Login } from './login.js';
+import { DashboardView } from './dashboard.js';
+import { showToast } from '../utils/alert.js';
 
 const token = () => localStorage.getItem('auth_token');
 
@@ -26,7 +27,7 @@ function applyCart(cartResponse) {
     updateCartBadge();
 }
 
-async function loadCart() {
+export async function loadCart() {
     try {
         const cartResponse = await api('/cart');
         applyCart(cartResponse);
@@ -157,7 +158,7 @@ function productsShell() {
     </div>
 
     <!-- CART TOAST -->
-    <div id="cart-toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[300] pointer-events-none opacity-0 transition-all duration-300 translate-y-4">
+    <div id="cart-toast" class="fixed top-25 right-6 z-[300] pointer-events-none opacity-0 transition-all duration-500" style="transform: translateX(150%)">
       <div class="flex items-center gap-3 bg-surface border border-secondary/60 px-5 py-3 shadow-[0_0_30px_rgba(155,89,247,.25)]">
         <span class="text-secondary">⬡</span>
         <span id="cart-toast-msg" class="font-josefin text-[0.72rem] tracking-[0.15em] uppercase text-(--color-white)"></span>
@@ -190,7 +191,7 @@ function productsShell() {
   `;
 }
 
-function skeletonGrid() {
+export function skeletonGrid() {
     const items = Array(8).fill(null).map(() => `
     <div class="bg-surface border border-border overflow-hidden animate-pulse">
       <div class="h-72 bg-surface2"></div>
@@ -207,7 +208,7 @@ function skeletonGrid() {
     return `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[1px] bg-border border border-border">${items}</div>`;
 }
 
-async function fetchCategories() {
+export async function fetchCategories() {
     try {
         const data = await api('/categories');
         state.categories = Array.isArray(data) ? data : (data.content || []);
@@ -462,7 +463,7 @@ function productListRow(p) {
     </div>`;
 }
 
-function goToProduct(id) {
+export function goToProduct(id) {
     if (!id) return;
     window.location.href = `/product?id=${id}`;
 }
@@ -577,7 +578,7 @@ function closeDetail() {
     drawer.classList.add('translate-x-full');
 }
 
-async function addToCart(product) {
+export async function addToCart(product) {
     if (!isAuthenticated() || !isTokenValid()) {
         showToast('Please log in to use the cart');
         return;
@@ -593,7 +594,6 @@ async function addToCart(product) {
     };
 
     const users = await api('/users/me');
-    console.log(users);
     const userId = users.id;
     try {
         api(`/users/${userId}/interactions`, {
@@ -701,7 +701,9 @@ function renderCartDrawer() {
         : state.cart.map(item => `
             <div class="flex gap-4 px-7 py-5 border-b border-border hover:bg-surface2/50 transition-colors">
               <div class="w-16 h-16 shrink-0 bg-surface2 border border-border overflow-hidden flex items-center justify-center">
-                <span class="font-bebas text-2xl text-border">⬡</span>
+                <img src="${item.mainImageUrl}" alt="${item.name}"
+               class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 group-hover:brightness-110"
+               loading="lazy" onerror="this.parentElement.innerHTML='<span class=\\'font-bebas text-6xl text-border\\'>⬡</span>'">
               </div>
               <div class="flex-1 min-w-0">
                 <div class="font-josefin text-[0.78rem] tracking-[0.1em] uppercase mb-1 truncate">${item.productName}</div>
@@ -740,23 +742,6 @@ function renderCartDrawer() {
     });
 }
 
-let toastTimer;
-
-function showToast(msg) {
-    const toast = document.getElementById('cart-toast');
-    const msgEl = document.getElementById('cart-toast-msg');
-    if (!toast || !msgEl) return;
-    msgEl.textContent = msg;
-    toast.style.opacity = '1';
-    toast.style.transform = 'translateX(-50%) translateY(0)';
-    toast.style.pointerEvents = 'none';
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(-50%) translateY(12px)';
-    }, 2200);
-}
-
 let searchTimer;
 
 function onSearch(val) {
@@ -773,7 +758,7 @@ function categoryName(id) {
     return cat ? cat.name : `Cat #${id}`;
 }
 
-function bindEvents() {
+export function bindEvents() {
     document.getElementById('search-input')?.addEventListener('input', e => onSearch(e.target.value));
 
     document.getElementById('sort-select')?.addEventListener('change', e => {

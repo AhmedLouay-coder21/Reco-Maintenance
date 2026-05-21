@@ -18,7 +18,7 @@ public class ColdStartStrategy implements RecommendationStrategy {
     @Override
     public List<RecommendationItemResponse> recommend(User user, int limit) {
 
-        List<Product> products = productRepository.findTop10ByOrderByPopularityScoreDesc();
+        List<Product> products = productRepository.findTop12ByOrderByPopularityScoreDesc();
 
         return products.stream().limit(limit)
                 .map(p -> RecommendationItemResponse.builder()
