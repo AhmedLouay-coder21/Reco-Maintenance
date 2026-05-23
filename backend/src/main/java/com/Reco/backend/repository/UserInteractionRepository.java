@@ -29,4 +29,8 @@ public interface UserInteractionRepository extends JpaRepository<UserInteraction
     @Query("SELECT DISTINCT ui.product.id FROM UserInteraction ui WHERE ui.user.id IN :userIds")
     List<Long> findDistinctProductIdsByUserIds(@Param("userIds") List<Long> userIds);
 
+    void deleteByUser(User user);
+
+    void deleteByProduct(Product product);
+
 }

@@ -6,7 +6,10 @@ import com.Reco.backend.dto.response.CategoryResponse;
 import com.Reco.backend.exception.DuplicateCategoryException;
 import com.Reco.backend.exception.ResourceNotFoundException;
 import com.Reco.backend.model.Category;
+import com.Reco.backend.model.Product;
 import com.Reco.backend.repository.CategoryRepository;
+import com.Reco.backend.repository.ProductRepository;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,9 +21,22 @@ import java.util.stream.Collectors;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
 
-    public CategoryService(CategoryRepository categoryRepository) {
+    public CategoryService(CategoryRepository categoryRepository, ProductRepository productRepository) {
         this.categoryRepository = categoryRepository;
+        this.productRepository = productRepository;
+    }
+
+    @PostConstruct
+    public void ensureUncategorizedExists() {
+        if (categoryRepository.findByName("Uncategorized").isEmpty()) {
+            Category uncategorized = Category.builder()
+                    .name("Uncategorized")
+                    .description("Default category for uncategorized products")
+                    .build();
+            categoryRepository.save(uncategorized);
+        }
     }
 
 
@@ -84,8 +100,19 @@ public class CategoryService {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
+        if (category.getName().equals("Uncategorized")) {
+            throw new IllegalArgumentException("Cannot delete the Uncategorized category");
+        }
+
+        Category uncategorized = categoryRepository.findByName("Uncategorized")
+                .orElseThrow(() -> new ResourceNotFoundException("Uncategorized category not found"));
+
+        List<Product> products = productRepository.findByCategory(category);
+        for (Product product : products) {
+            product.setCategory(uncategorized);
+        }
+        productRepository.saveAll(products);
 
         categoryRepository.delete(category);
-
     }
 }

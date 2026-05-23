@@ -18,4 +18,5 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, Instant before);
 
+    void deleteByUser(User user);
 }

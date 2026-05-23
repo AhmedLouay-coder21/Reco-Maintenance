@@ -1,5 +1,6 @@
 package com.Reco.backend.repository;
 
+import com.Reco.backend.model.Category;
 import com.Reco.backend.model.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +16,8 @@ import java.util.Optional;
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findByCategoryId(Long categoryId);
+
+    List<Product> findByCategory(Category category);
 
     List<Product> findByNameContainingOrDescriptionContaining(String nameQuery, String descriptionQuery);
 

@@ -34,6 +34,10 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @Query("SELECT DISTINCT r.product.id FROM Review r WHERE r.user.id = :userId AND r.rating >= :minRating")
     List<Long> findDistinctProductIdsByUserIdAndRatingGreaterThanEqual(@Param("userId") Long userId,
-                                                                       @Param("minRating") int minRating);
+                                                                        @Param("minRating") int minRating);
+
+    void deleteByUser(User user);
+
+    void deleteByProduct(Product product);
 
 }

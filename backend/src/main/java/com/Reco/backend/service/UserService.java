@@ -6,27 +6,31 @@ import com.Reco.backend.dto.response.UserResponse;
 import com.Reco.backend.exception.DuplicateUserException;
 import com.Reco.backend.exception.InvalidPasswordException;
 import com.Reco.backend.exception.ResourceNotFoundException;
+import com.Reco.backend.model.Cart;
 import com.Reco.backend.model.User;
-import com.Reco.backend.repository.UserRepository;
+import com.Reco.backend.repository.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
+    private final RecommendationCacheRepository recommendationCacheRepository;
+    private final NotificationRepository notificationRepository;
+    private final CartRepository cartRepository;
+    private final CartItemRepository cartItemRepository;
 
     private UserResponse toResponse(User user) {
         return UserResponse.builder()
@@ -130,6 +134,9 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        Cart cart = cartRepository.findByUser(user)
+                .orElse(null);
+
         String authedEmail = SecurityContextHolder.getContext()
                 .getAuthentication().getName();
 
@@ -137,6 +144,23 @@ public class UserService {
             throw new ResourceNotFoundException("Cannot delete other user accounts");
         }
 
-        userRepository.delete(user);
+
+        recommendationCacheRepository.deleteByUser(user);
+        notificationRepository.deleteByUser(user);
+
+
+        if (cart != null) {
+            cartItemRepository.deleteByCart(cart);
+            cartRepository.delete(cart);
+        }
+
+        user.setFirstName("Deleted");
+        user.setLastName("User");
+        user.setUsername("deleted-" + user.getId());
+        user.setEmail("deleted-" + user.getId() + "@anonymous.local");
+        user.setPasswordHash(UUID.randomUUID().toString());
+        user.setDeletedAt(Instant.now());
+
+        userRepository.save(user);
     }
 }

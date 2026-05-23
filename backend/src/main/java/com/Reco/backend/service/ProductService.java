@@ -6,8 +6,7 @@ import com.Reco.backend.exception.DuplicateProductException;
 import com.Reco.backend.exception.ResourceNotFoundException;
 import com.Reco.backend.model.Category;
 import com.Reco.backend.model.Product;
-import com.Reco.backend.repository.CategoryRepository;
-import com.Reco.backend.repository.ProductRepository;
+import com.Reco.backend.repository.*;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,11 +19,29 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final CartItemRepository cartItemRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final ReviewRepository reviewRepository;
+    private final UserInteractionRepository userInteractionRepository;
+    private final RecommendationCacheRepository recommendationCacheRepository;
+    private final ProductSimilarityRepository productSimilarityRepository;
 
-
-    public ProductService(ProductRepository productRepository, CategoryRepository categoryRepository) {
+    public ProductService(ProductRepository productRepository,
+                          CategoryRepository categoryRepository,
+                          CartItemRepository cartItemRepository,
+                          OrderItemRepository orderItemRepository,
+                          ReviewRepository reviewRepository,
+                          UserInteractionRepository userInteractionRepository,
+                          RecommendationCacheRepository recommendationCacheRepository,
+                          ProductSimilarityRepository productSimilarityRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
+        this.cartItemRepository = cartItemRepository;
+        this.orderItemRepository = orderItemRepository;
+        this.reviewRepository = reviewRepository;
+        this.userInteractionRepository = userInteractionRepository;
+        this.recommendationCacheRepository = recommendationCacheRepository;
+        this.productSimilarityRepository = productSimilarityRepository;
     }
 
     private ProductResponse toResponse(Product product) {
@@ -120,6 +137,13 @@ public class ProductService {
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+
+        cartItemRepository.deleteByProduct(product);
+        orderItemRepository.deleteByProduct(product);
+        reviewRepository.deleteByProduct(product);
+        userInteractionRepository.deleteByProduct(product);
+        recommendationCacheRepository.deleteByProduct(product);
+        productSimilarityRepository.deleteBySourceOrSimilar(product);
 
         productRepository.delete(product);
     }

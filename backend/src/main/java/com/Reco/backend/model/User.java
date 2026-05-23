@@ -51,6 +51,8 @@ public class User implements UserDetails {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    private Instant deletedAt;
+
     public String getUsernameField() {
         return username;  // Returns the actual username field
     }
@@ -87,6 +89,6 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return UserDetails.super.isEnabled();
+        return deletedAt == null;
     }
 }

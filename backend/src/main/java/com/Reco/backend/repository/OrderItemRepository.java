@@ -2,6 +2,7 @@ package com.Reco.backend.repository;
 
 import com.Reco.backend.model.Order;
 import com.Reco.backend.model.OrderItem;
+import com.Reco.backend.model.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +14,8 @@ import java.util.List;
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
     List<OrderItem> findByOrder(Order order);
+
+    void deleteByProduct(Product product);
 
     @Query(value = """
             SELECT oi2.product_id, COUNT(*) as freq,

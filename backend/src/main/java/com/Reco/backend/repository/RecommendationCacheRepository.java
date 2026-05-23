@@ -1,5 +1,6 @@
 package com.Reco.backend.repository;
 
+import com.Reco.backend.model.Product;
 import com.Reco.backend.model.RecommendationCache;
 import com.Reco.backend.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,6 +18,7 @@ public interface RecommendationCacheRepository extends JpaRepository<Recommendat
 
     void deleteByUser(User user);
 
-    void deleteAll();
+    void deleteByProduct(Product product);
 
+    void deleteAll();
 }
