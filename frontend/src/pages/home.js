@@ -6,7 +6,7 @@ import {
   Marquee, FeatureCard,
   StatCard, TestimonialFeatured, TestimonialCard
 } from '../components/components.js'
-import { api } from '../api/auth.js'
+import { api, isAuthenticated, isTokenValid } from '../api/auth.js'
 import { showToast } from '../utils/alert.js'
 import { addToCart, bindEvents, fetchCategories, goToProduct, loadCart, productCard, skeletonGrid } from './products.js'
 
@@ -134,7 +134,12 @@ export function HomeView() {
 }
 
 async function initHomePage() {
-  await Promise.all([fetchCategories(), loadCart()])
+  const tasks = [fetchCategories()]
+  if (isAuthenticated() && isTokenValid()) {
+    tasks.push(loadCart())
+  }
+
+  await Promise.all(tasks)
 
   const observer = new IntersectionObserver(entries => {
     entries.forEach(entry => {
@@ -191,32 +196,46 @@ async function loadTopProducts() {
 }
 
 async function bindTopProductCards(container, topProducts) {
-  const uid = await api(`/users/me`);
-  const userId = uid.id;
+  const canTrack = isAuthenticated() && isTokenValid();
+  let userId = null;
+
+  if (canTrack) {
+    try {
+      const uid = await api(`/users/me`);
+      userId = uid.id;
+    } catch (_) {
+      userId = null;
+    }
+  }
+
   container.querySelectorAll('[data-product-id]').forEach(card => {
     const id = Number(card.dataset.productId)
     const product = topProducts.find(item => item.productId === id)
     card.querySelector('.btn-cart')?.addEventListener('click', event => {
-          api(`/users/${userId}/interactions`, { 
-            method: 'POST', 
-            body: JSON.stringify({
-              productId: product.id || product.productId, 
-              interactionType: 'CART_ADD'
-            }) 
-          }).catch(() => {}); 
+          if (userId) {
+            api(`/users/${userId}/interactions`, {
+              method: 'POST',
+              body: JSON.stringify({
+                productId: product.id || product.productId,
+                interactionType: 'CART_ADD'
+              })
+            }).catch(() => {});
+          }
       event.stopPropagation()
       addToCart(product)
     })
 
     card.querySelector('.card-click-area')?.addEventListener('click', () => {
-          api(`/users/${userId}/interactions`, { 
-            method: 'POST', 
-            body: JSON.stringify({
-              productId: product.id || product.productId, 
-              interactionType: 'CLICK'
-            }) 
-          }).catch(() => {}); 
-          
+          if (userId) {
+            api(`/users/${userId}/interactions`, {
+              method: 'POST',
+              body: JSON.stringify({
+                productId: product.id || product.productId,
+                interactionType: 'CLICK'
+              })
+            }).catch(() => {});
+          }
+
           goToProduct(id);
         });
   })

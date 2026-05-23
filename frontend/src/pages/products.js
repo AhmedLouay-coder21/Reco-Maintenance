@@ -281,9 +281,19 @@ function renderProductsLoading() {
 
 async function renderProducts() {
     const el = document.getElementById('products-container');
-    const uid = await api(`/users/me`);
-    const userId = uid.id;
     if (!el) return;
+
+  const canTrack = isAuthenticated() && isTokenValid();
+  let userId = null;
+
+  if (canTrack) {
+    try {
+      const uid = await api(`/users/me`);
+      userId = uid.id;
+    } catch (_) {
+      userId = null;
+    }
+  }
 
     if (!state.products.length) {
         el.innerHTML = emptyState();
@@ -306,13 +316,15 @@ async function renderProducts() {
         });
 
         card.querySelector('.card-click-area')?.addEventListener('click', () => {
-          api(`/users/${userId}/interactions`, { 
-            method: 'POST', 
-            body: JSON.stringify({
-              productId: product.id || product.productId, 
-              interactionType: 'CLICK'
-            }) 
-          }).catch(() => {}); 
+          if (userId) {
+            api(`/users/${userId}/interactions`, {
+              method: 'POST',
+              body: JSON.stringify({
+                productId: product.id || product.productId,
+                interactionType: 'CLICK'
+              })
+            }).catch(() => {});
+          }
           
           goToProduct(id);
         });
