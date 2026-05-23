@@ -191,10 +191,10 @@ async function loadTopProducts() {
 }
 
 async function bindTopProductCards(container, topProducts) {
+  const uid = await api(`/users/me`);
+  const userId = uid.id;
   container.querySelectorAll('[data-product-id]').forEach(card => {
     const id = Number(card.dataset.productId)
-    const uid = await api(`/users/me`);
-    const userId = uid.id;
     const product = topProducts.find(item => item.productId === id)
     card.querySelector('.btn-cart')?.addEventListener('click', event => {
           api(`/users/${userId}/interactions`, { 

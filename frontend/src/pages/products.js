@@ -279,7 +279,7 @@ function renderProductsLoading() {
     if (el) el.innerHTML = skeletonGrid();
 }
 
-function renderProducts() {
+async function renderProducts() {
     const el = document.getElementById('products-container');
     const uid = await api(`/users/me`);
     const userId = uid.id;
