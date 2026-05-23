@@ -190,7 +190,7 @@ async function loadTopProducts() {
   }
 }
 
-function bindTopProductCards(container, topProducts) {
+async function bindTopProductCards(container, topProducts) {
   container.querySelectorAll('[data-product-id]').forEach(card => {
     const id = Number(card.dataset.productId)
     const uid = await api(`/users/me`);
