@@ -281,6 +281,8 @@ function renderProductsLoading() {
 
 function renderProducts() {
     const el = document.getElementById('products-container');
+    const uid = await api(`/users/me`);
+    const userId = uid.id;
     if (!el) return;
 
     if (!state.products.length) {
@@ -303,7 +305,17 @@ function renderProducts() {
             addToCart(product);
         });
 
-        card.querySelector('.card-click-area')?.addEventListener('click', () => goToProduct(id));
+        card.querySelector('.card-click-area')?.addEventListener('click', () => {
+          api(`/users/${userId}/interactions`, { 
+            method: 'POST', 
+            body: JSON.stringify({
+              productId: product.id || product.productId, 
+              interactionType: 'CLICK'
+            }) 
+          }).catch(() => {}); 
+          
+          goToProduct(id);
+        });
     });
 
     // scroll reveal

@@ -278,7 +278,7 @@ async function handleLoginSubmit(e)
 
     catch (error)
     {
-        showToast("Login Failed: " , 'error');
+        showToast("Login Failed: " + error.message , 'error');
     }
     
     finally

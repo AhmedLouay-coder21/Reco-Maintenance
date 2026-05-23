@@ -1,6 +1,7 @@
 import {api, getUserFirstName, getUserRole, isAuthenticated, isTokenValid} from '../api/auth.js';
 import { showToast } from '../utils/alert.js';
 import { PaymentView } from './payment.js';
+import { confirmDialog } from '../utils/confirm.js';
 
 const token = () => localStorage.getItem('auth_token');
 
@@ -271,7 +272,7 @@ async function loadAdminOverview() {
         const totalProducts = prods.status === 'fulfilled' ? (prods == 'undefined' ? "0" : prods.value.content.length) : '—';
         const totalCats = cats.status === 'fulfilled' ? (cats == 'undefined' ? "0" : cats.value.length) : '—';
         const totalUsers = usersData.status === 'fulfilled' ? (usersData == 'undefined' ? "0" : usersData.value.length - 1) : '—';
-        const totalOrders = orders.status === 'fulfilled' ? (orders == 'undefined' ? "0" : orders.value.length - 1) : '—';
+        const totalOrders = orders.status === 'fulfilled' ? (orders == 'undefined' ? "0" : orders.value.length) : '—';
 
         el.innerHTML = `
       <div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 mb-7">
@@ -342,12 +343,11 @@ async function loadRecentOrders() {
           </table>
         </div>`;
     } catch {
-        el.innerHTML = emptyMarkup('Select Orders panel to manage all orders.');;
+        el.innerHTML = emptyMarkup('Select Orders panel to manage all orders.');
     }
 }
 
 function openProductModal(product) {
-  console.log(product);
     const isEdit = !!product;
     openModal(`
     <div class="relative w-[min(520px,95vw)] max-h-[90vh] overflow-y-auto border border-border bg-surface2 p-7">
@@ -423,15 +423,16 @@ async function loadAdminCategories() {
         document.getElementById('newCatBtn').addEventListener('click', () => openCatModal(null));
         el.querySelectorAll('[data-edit-cat]').forEach(btn => btn.addEventListener('click', () => openCatModal(JSON.parse(btn.dataset.cat))));
         el.querySelectorAll('[data-del-cat]').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                if (!confirm('Delete category?')) return;
-                try {
-                    await api(`/categories/${btn.dataset.delCat}`, {method: 'DELETE'});
-                    showToast('Category deleted');
-                    loadAdminCategories();
-                } catch (e) {
-                    showToast(e.message, 'error');
-                }
+            btn.addEventListener('click', () => {
+                confirmDialog('Delete category?', async () => {
+                    try {
+                        await api(`/categories/${btn.dataset.delCat}`, {method: 'DELETE'});
+                        showToast('Category deleted');
+                        loadAdminCategories();
+                    } catch (e) {
+                        showToast(e.message, 'error');
+                    }
+                });
             });
         });
     } catch (e) {
@@ -477,7 +478,7 @@ async function loadAdminUsers() {
     try {
         const users = await api('/users');
         el.innerHTML = `
-      <div class="flex items-center justify-between mb-4"><div class="font-bebas text-[1.1rem] tracking-[0.2em] text-line-bright">Users (${users.total})</div></div>
+      <div class="flex items-center justify-between mb-4"><div class="font-bebas text-[1.1rem] tracking-[0.2em] text-line-bright">Users (${users.length})</div></div>
       <div class="${tableWrapClass}">
         <table class="${tableClass}">
           <thead><tr><th class="${thClass}">ID</th><th class="${thClass}">Username</th><th class="${thClass}">Email</th><th class="${thClass}">Role</th><th class="${thClass}">Joined</th><th class="${thClass}">Actions</th></tr></thead>
@@ -497,15 +498,16 @@ async function loadAdminUsers() {
         </table>
       </div>`;
         el.querySelectorAll('[data-del-user]').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                if (!confirm('Delete this user? This cascades to all their data.')) return;
-                try {
-                    await api(`/users/${btn.dataset.delUser}`, {method: 'DELETE'});
-                    showToast('User deleted');
-                    loadAdminUsers();
-                } catch (e) {
-                    showToast(e.message, 'error');
-                }
+            btn.addEventListener('click', () => {
+                confirmDialog('Delete this user? This cascades to all their data.', async () => {
+                    try {
+                        await api(`/users/${btn.dataset.delUser}`, {method: 'DELETE'});
+                        showToast('User deleted');
+                        loadAdminUsers();
+                    } catch (e) {
+                        showToast(e.message, 'error');
+                    }
+                });
             });
         });
     } catch (e) {
@@ -551,14 +553,16 @@ async function loadAdminCache() {
             }
         });
         el.querySelectorAll('[data-del-cache]').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                try {
-                    await api(`/recommendations/cache/${btn.dataset.delCache}`, {method: 'DELETE'});
-                    showToast('Cache entry deleted');
-                    loadAdminCache();
-                } catch (e) {
-                    showToast(e.message, 'error');
-                }
+            btn.addEventListener('click', () => {
+                confirmDialog('Delete this cache entry?', async () => {
+                    try {
+                        await api(`/recommendations/cache/${btn.dataset.delCache}`, {method: 'DELETE'});
+                        showToast('Cache entry deleted');
+                        loadAdminCache();
+                    } catch (e) {
+                        showToast(e.message, 'error');
+                    }
+                });
             });
         });
     } catch (e) {
@@ -606,12 +610,12 @@ function renderProductGrid(products, container) {
                 const productId = Number(btn.dataset.addCart);
                 await api('/cart/items', {method: 'POST', body: JSON.stringify({productId, quantity: 1})});
                 showToast('Added to cart');
-                // track interaction
-                api(`/users/${uid}/interactions`, {
+                const uid = await api(`/users/me`);
+                const userId = uid.id;
+                api(`/users/${userId}/interactions`, {
                     method: 'POST',
                     body: JSON.stringify({productId, interactionType: 'CART_ADD'})
-                }).catch(() => {
-                });
+                }).catch(() => {});
             } catch (e) {
                 showToast(e.message, 'error');
             }
@@ -685,7 +689,6 @@ async function openProductDetailModal(productId) {
             </div>
           </div>` : ''}
       </div>`);
-
 
         const picker = document.getElementById('star-picker');
         picker.querySelectorAll('span').forEach(s => {
@@ -793,8 +796,7 @@ async function loadRecs() {
                     await api(`/users/${uid}/interactions`, {
                         method: 'POST',
                         body: JSON.stringify({productId, interactionType: 'CART_ADD'}),
-                    }).catch(() => {
-                    });
+                    }).catch(() => {});
                     await api('/cart/items', {
                         method: 'POST',
                         body: JSON.stringify({productId, quantity: 1}),
@@ -851,15 +853,16 @@ async function loadCart() {
         </div>
       </div>`;
 
-        document.getElementById('clear-cart').addEventListener('click', async () => {
-            if (!confirm('Clear entire cart?')) return;
-            try {
-                await api(`/cart/clear`, {method: 'DELETE'});
-                showToast('Cart cleared');
-                loadCart();
-            } catch (e) {
-                showToast(e.message, 'error');
-            }
+        document.getElementById('clear-cart').addEventListener('click', () => {
+            confirmDialog('Clear entire cart?', async () => {
+                try {
+                    await api(`/cart/clear`, {method: 'DELETE'});
+                    showToast('Cart cleared');
+                    loadCart();
+                } catch (e) {
+                    showToast(e.message, 'error');
+                }
+            });
         });
 
         el.querySelectorAll('[data-remove-item]').forEach(btn => {
@@ -1084,15 +1087,16 @@ async function loadMyReviews() {
         });
 
         el.querySelectorAll('[data-del-review]').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                if (!confirm('Delete this review?')) return;
-                try {
-                    await api(`/reviews/${btn.dataset.delReview}`, {method: 'DELETE'});
-                    showToast('Review deleted');
-                    loadMyReviews();
-                } catch (e) {
-                    showToast(e.message, 'error');
-                }
+            btn.addEventListener('click', () => {
+                confirmDialog('Delete this review?', async () => {
+                    try {
+                        await api(`/reviews/${btn.dataset.delReview}`, {method: 'DELETE'});
+                        showToast('Review deleted');
+                        loadMyReviews();
+                    } catch (e) {
+                        showToast(e.message, 'error');
+                    }
+                });
             });
         });
     } catch (e) {
@@ -1134,22 +1138,23 @@ async function loadProfile() {
                         username: document.getElementById('p-username').value,
                         email: document.getElementById('p-email').value
                     })
-                })
+                });
                 showToast('Profile updated');
             } catch (e) {
                 showToast(e.message, 'error');
             }
         });
 
-        document.getElementById('delete-account-btn').addEventListener('click', async () => {
-            if (!confirm('Permanently delete your account and all data?')) return;
-            try {
-                await api(`/users/${uid}`, {method: 'DELETE'});
-                ['auth_token', 'firstName', 'lastName', 'role', 'user_id'].forEach(k => localStorage.removeItem(k));
-                window.location.href = '/';
-            } catch (e) {
-                showToast(e.message, 'error');
-            }
+        document.getElementById('delete-account-btn').addEventListener('click', () => {
+            confirmDialog('Permanently delete your account and all data?', async () => {
+                try {
+                    await api(`/users/${uid}`, {method: 'DELETE'});
+                    ['auth_token', 'firstName', 'lastName', 'role', 'user_id'].forEach(k => localStorage.removeItem(k));
+                    window.location.href = '/';
+                } catch (e) {
+                    showToast(e.message, 'error');
+                }
+            });
         });
     } catch (e) {
         el.innerHTML = emptyMarkup(e.message);
@@ -1277,12 +1282,9 @@ async function loadAdminOrders() {
     const totalRevenue = products.reduce((sum, products) => sum + (products.totalAmount || 0), 0);
     let completed = 0;
     let pending = 0;
-    products.forEach((order) =>
-    {
-      if(order.status == 'COMPLETED')
-        completed++;
-      else if(order.status == 'PENDING')
-        pending++;
+    products.forEach((order) => {
+        if (order.status == 'COMPLETED') completed++;
+        else if (order.status == 'PENDING') pending++;
     });
 
     el.innerHTML = `
@@ -1333,10 +1335,104 @@ async function loadAdminOrders() {
     </div>
     <div id="orders-result"></div>`;
 
+    function renderOrderTable(orders, container) {
+        const total = orders.length;
+        const completed = orders.filter(o => statusKey(o.status) === 'COMPLETED').length;
+        const pending = orders.filter(o => statusKey(o.status) === 'PENDING').length;
+
+        const statuses = [
+            {label: 'Completed', count: completed, color: 'bg-emerald-400', text: 'text-emerald-300'},
+            {label: 'Pending', count: pending, color: 'bg-yellow-400', text: 'text-yellow-300'},
+        ];
+        document.getElementById('od-bar-chart').innerHTML = statuses.map(s => `
+        <div>
+          <div class="flex justify-between mb-1">
+            <span class="text-[0.62rem] tracking-[0.15em] uppercase text-muted">${s.label}</span>
+            <span class="text-[0.62rem] tracking-[0.12em] ${s.text}">${s.count} · ${total ? ((s.count / total) * 100).toFixed(0) : 0}%</span>
+          </div>
+          <div class="h-[5px] bg-border/30 border border-border/40 overflow-hidden">
+            <div class="h-full ${s.color} opacity-70 transition-all duration-700" style="width:${total ? (s.count / total * 100).toFixed(1) : 0}%"></div>
+          </div>
+        </div>`).join('');
+
+        const revByStatus = [
+            {
+                label: 'Completed',
+                val: orders.filter(o => statusKey(o.status) === 'COMPLETED').reduce((s, o) => s + (Number(o.totalAmount) || 0), 0),
+                color: 'bg-secondary',
+                text: 'text-line-bright'
+            },
+            {
+                label: 'Pending',
+                val: orders.filter(o => statusKey(o.status) === 'PENDING').reduce((s, o) => s + (Number(o.totalAmount) || 0), 0),
+                color: 'bg-yellow-400',
+                text: 'text-yellow-300'
+            },
+        ];
+        const maxRev = Math.max(...revByStatus.map(r => r.val), 1);
+        document.getElementById('od-rev-chart').innerHTML = revByStatus.map(r => `
+        <div>
+          <div class="flex justify-between mb-1">
+            <span class="text-[0.62rem] tracking-[0.15em] uppercase text-muted">${r.label}</span>
+            <span class="text-[0.62rem] tracking-[0.12em] ${r.text}">$${r.val.toFixed(0)}</span>
+          </div>
+          <div class="h-[5px] bg-border/30 border border-border/40 overflow-hidden">
+            <div class="h-full ${r.color} opacity-70 transition-all duration-700" style="width:${(r.val / maxRev * 100).toFixed(1)}%"></div>
+          </div>
+        </div>`).join('');
+
+        container.innerHTML = `
+        <div class="${tableWrapClass}">
+          <table class="${tableClass}">
+            <thead>
+              <tr>
+                <th class="${thClass}">Order ID</th>
+                <th class="${thClass}">Total</th>
+                <th class="${thClass}">Status</th>
+                <th class="${thClass}">Date</th>
+                <th class="${thClass}">Update Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${orders.map(o => `
+                <tr>
+                  <td class="${tdClass} font-bebas text-[0.9rem] tracking-[0.1em] text-line-bright">#${o.id}</td>
+                  <td class="${tdClass} text-emerald-300">$${fmtMoney(o.totalAmount)}</td>
+                  <td class="${tdClass}">${statusPill(o.status)}</td>
+                  <td class="${tdClass} text-muted">${fmtDate(o.createdAt)}</td>
+                  <td class="${tdClass}">
+                    <div class="flex items-center gap-2">
+                      <select class="${selectSmClass} w-auto" data-order-id="${o.id}">
+                        <option value="PENDING" ${statusKey(o.status) === 'PENDING' ? 'selected' : ''}>Pending</option>
+                        <option value="COMPLETED" ${statusKey(o.status) === 'COMPLETED' ? 'selected' : ''}>Completed</option>
+                      </select>
+                      <button class="${btnBaseClass} ${btnSmClass}" data-update-order="${o.id}">Set</button>
+                    </div>
+                  </td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+
+        container.querySelectorAll('[data-update-order]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const sel = container.querySelector(`select[data-order-id="${btn.dataset.updateOrder}"]`);
+                try {
+                    await api(`/orders/${btn.dataset.updateOrder}/status`, {
+                        method: 'PUT',
+                        body: JSON.stringify({status: sel.value})
+                    });
+                    showToast('Order status updated');
+                    document.getElementById('order-search-btn').click();
+                } catch (e) {
+                    showToast(e.message, 'error');
+                }
+            });
+        });
+    }
 
     document.getElementById('order-search-btn').addEventListener('click', async () => {
         const uid = document.getElementById('order-uid').value.trim();
-        
         if (!uid) return;
         const res = document.getElementById('orders-result');
         res.innerHTML = loadingMarkup('Loading');
@@ -1347,220 +1443,25 @@ async function loadAdminOrders() {
                 res.innerHTML = emptyMarkup('No orders found');
                 return;
             }
-
-
-            const total = orders.length;
-            const completed = orders.filter(o => statusKey(o.status) === 'COMPLETED').length;
-            const pending = orders.filter(o => statusKey(o.status) === 'PENDING').length;
-            const revenue = orders.reduce((s, o) => s + (Number(o.totalAmount) || 0), 0);
-
-            const statuses = [
-                {label: 'Completed', count: completed, color: 'bg-emerald-400', text: 'text-emerald-300'},
-                {label: 'Pending', count: pending, color: 'bg-yellow-400', text: 'text-yellow-300'},
-            ];
-            document.getElementById('od-bar-chart').innerHTML = statuses.map(s => `
-        <div>
-          <div class="flex justify-between mb-1">
-            <span class="text-[0.62rem] tracking-[0.15em] uppercase text-muted">${s.label}</span>
-            <span class="text-[0.62rem] tracking-[0.12em] ${s.text}">${s.count} · ${total ? ((s.count / total) * 100).toFixed(0) : 0}%</span>
-          </div>
-          <div class="h-[5px] bg-border/30 border border-border/40 overflow-hidden">
-            <div class="h-full ${s.color} opacity-70 transition-all duration-700" style="width:${total ? (s.count / total * 100).toFixed(1) : 0}%"></div>
-          </div>
-        </div>`).join('');
-
-
-            const revByStatus = [
-                {
-                    label: 'Completed',
-                    val: orders.filter(o => statusKey(o.status) === 'COMPLETED').reduce((s, o) => s + (Number(o.totalAmount) || 0), 0),
-                    color: 'bg-secondary',
-                    text: 'text-line-bright'
-                },
-                {
-                    label: 'Pending',
-                    val: orders.filter(o => statusKey(o.status) === 'PENDING').reduce((s, o) => s + (Number(o.totalAmount) || 0), 0),
-                    color: 'bg-yellow-400',
-                    text: 'text-yellow-300'
-                },
-            ];
-            const maxRev = Math.max(...revByStatus.map(r => r.val), 1);
-            console.log(maxRev);
-            console.log(revByStatus);
-            document.getElementById('od-rev-chart').innerHTML = revByStatus.map(r => `
-        <div>
-          <div class="flex justify-between mb-1">
-            <span class="text-[0.62rem] tracking-[0.15em] uppercase text-muted">${r.label}</span>
-            <span class="text-[0.62rem] tracking-[0.12em] ${r.text}">$${r.val.toFixed(0)}</span>
-          </div>
-          <div class="h-[5px] bg-border/30 border border-border/40 overflow-hidden">
-            <div class="h-full ${r.color} opacity-70 transition-all duration-700" style="width:${(r.val / maxRev * 100).toFixed(1)}%"></div>
-          </div>
-        </div>`).join('');
-
-
-            res.innerHTML = `
-        <div class="${tableWrapClass}">
-          <table class="${tableClass}">
-            <thead>
-              <tr>
-                <th class="${thClass}">Order ID</th>
-                <th class="${thClass}">Total</th>
-                <th class="${thClass}">Status</th>
-                <th class="${thClass}">Date</th>
-                <th class="${thClass}">Update Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${orders.map(o => `
-                <tr>
-                  <td class="${tdClass} font-bebas text-[0.9rem] tracking-[0.1em] text-line-bright">#${o.id}</td>
-                  <td class="${tdClass} text-emerald-300">$${fmtMoney(o.totalAmount)}</td>
-                  <td class="${tdClass}">${statusPill(o.status)}</td>
-                  <td class="${tdClass} text-muted">${fmtDate(o.createdAt)}</td>
-                  <td class="${tdClass}">
-                    <div class="flex items-center gap-2">
-                      <select class="${selectSmClass} w-auto" data-order-id="${o.id}">
-                        <option value="PENDING" ${statusKey(o.status) === 'PENDING' ? 'selected' : ''}>Pending</option>
-                        <option value="COMPLETED" ${statusKey(o.status) === 'COMPLETED' ? 'selected' : ''}>Completed</option>
-                      </select>
-                      <button class="${btnBaseClass} ${btnSmClass}" data-update-order="${o.id}">Set</button>
-                    </div>
-                  </td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>`;
-
-            res.querySelectorAll('[data-update-order]').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    const sel = res.querySelector(`select[data-order-id="${btn.dataset.updateOrder}"]`);
-                    try {
-                        await api(`/orders/${btn.dataset.updateOrder}/status`, {
-                            method: 'PUT',
-                            body: JSON.stringify({status: sel.value})
-                        });
-                        showToast('Order status updated');
-                        document.getElementById('order-search-btn').click();
-                    } catch (e) {
-                        showToast(e.message, 'error');
-                    }
-                });
-            });
+            renderOrderTable(orders, res);
         } catch (e) {
             res.innerHTML = emptyMarkup(e.message);
         }
     });
+
     const res = document.getElementById('orders-result');
-        res.innerHTML = loadingMarkup('Loading');
-        try {
-            const orders = Array.isArray(products) ? products : (products?.content || []);
-            if (!orders.length) {
-                res.innerHTML = emptyMarkup('No orders found');
-                return;
-            }
-            
-            const total = orders.length;
-            const completed = orders.filter(o => statusKey(o.status) === 'COMPLETED').length;
-            const pending = orders.filter(o => statusKey(o.status) === 'PENDING').length;
-            const revenue = orders.reduce((s, o) => s + (Number(o.totalAmount) || 0), 0);
-
-            const statuses = [
-                {label: 'Completed', count: completed, color: 'bg-emerald-400', text: 'text-emerald-300'},
-                {label: 'Pending', count: pending, color: 'bg-yellow-400', text: 'text-yellow-300'},
-            ];
-            document.getElementById('od-bar-chart').innerHTML = statuses.map(s => `
-        <div>
-          <div class="flex justify-between mb-1">
-            <span class="text-[0.62rem] tracking-[0.15em] uppercase text-muted">${s.label}</span>
-            <span class="text-[0.62rem] tracking-[0.12em] ${s.text}">${s.count} · ${total ? ((s.count / total) * 100).toFixed(0) : 0}%</span>
-          </div>
-          <div class="h-[5px] bg-border/30 border border-border/40 overflow-hidden">
-            <div class="h-full ${s.color} opacity-70 transition-all duration-700" style="width:${total ? (s.count / total * 100).toFixed(1) : 0}%"></div>
-          </div>
-        </div>`).join('');
-
-
-            const revByStatus = [
-                {
-                    label: 'Completed',
-                    val: orders.filter(o => statusKey(o.status) === 'COMPLETED').reduce((s, o) => s + (Number(o.totalAmount) || 0), 0),
-                    color: 'bg-secondary',
-                    text: 'text-line-bright'
-                },
-                {
-                    label: 'Pending',
-                    val: orders.filter(o => statusKey(o.status) === 'PENDING').reduce((s, o) => s + (Number(o.totalAmount) || 0), 0),
-                    color: 'bg-yellow-400',
-                    text: 'text-yellow-300'
-                },
-            ];
-            const maxRev = Math.max(...revByStatus.map(r => r.val), 1);
-            document.getElementById('od-rev-chart').innerHTML = revByStatus.map(r => `
-        <div>
-          <div class="flex justify-between mb-1">
-            <span class="text-[0.62rem] tracking-[0.15em] uppercase text-muted">${r.label}</span>
-            <span class="text-[0.62rem] tracking-[0.12em] ${r.text}">$${r.val.toFixed(0)}</span>
-          </div>
-          <div class="h-[5px] bg-border/30 border border-border/40 overflow-hidden">
-            <div class="h-full ${r.color} opacity-70 transition-all duration-700" style="width:${(r.val / maxRev * 100).toFixed(1)}%"></div>
-          </div>
-        </div>`).join('');
-
-
-            res.innerHTML = `
-        <div class="${tableWrapClass}">
-          <table class="${tableClass}">
-            <thead>
-              <tr>
-                <th class="${thClass}">Order ID</th>
-                <th class="${thClass}">Total</th>
-                <th class="${thClass}">Status</th>
-                <th class="${thClass}">Date</th>
-                <th class="${thClass}">Update Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${orders.map(o => `
-                <tr>
-                  <td class="${tdClass} font-bebas text-[0.9rem] tracking-[0.1em] text-line-bright">#${o.id}</td>
-                  <td class="${tdClass} text-emerald-300">$${fmtMoney(o.totalAmount)}</td>
-                  <td class="${tdClass}">${statusPill(o.status)}</td>
-                  <td class="${tdClass} text-muted">${fmtDate(o.createdAt)}</td>
-                  <td class="${tdClass}">
-                    <div class="flex items-center gap-2">
-                      <select class="${selectSmClass} w-auto" data-order-id="${o.id}">
-                        <option value="PENDING" ${statusKey(o.status) === 'PENDING' ? 'selected' : ''}>Pending</option>
-                        <option value="COMPLETED" ${statusKey(o.status) === 'COMPLETED' ? 'selected' : ''}>Completed</option>
-                      </select>
-                      <button class="${btnBaseClass} ${btnSmClass}" data-update-order="${o.id}">Set</button>
-                    </div>
-                  </td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>`;
-
-            res.querySelectorAll('[data-update-order]').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    const sel = res.querySelector(`select[data-order-id="${btn.dataset.updateOrder}"]`);
-                    try {
-                        await api(`/orders/${btn.dataset.updateOrder}/status`, {
-                            method: 'PUT',
-                            body: JSON.stringify({status: sel.value})
-                        });
-                        showToast('Order status updated');
-                        document.getElementById('order-search-btn').click();
-                    } catch (e) {
-                        showToast(e.message, 'error');
-                    }
-                });
-            });
-        } catch (e) {
-            res.innerHTML = emptyMarkup(e.message);
+    res.innerHTML = loadingMarkup('Loading');
+    try {
+        const orders = Array.isArray(products) ? products : (products?.content || []);
+        if (!orders.length) {
+            res.innerHTML = emptyMarkup('No orders found');
+            return;
         }
+        renderOrderTable(orders, res);
+    } catch (e) {
+        res.innerHTML = emptyMarkup(e.message);
+    }
 }
-
 
 
 async function loadAdminProducts() {
@@ -1571,14 +1472,12 @@ async function loadAdminProducts() {
         const list = products.content || [];
         const totalProducts = products.totalElements ?? list.length;
 
-
         const avgPrice = list.length ? list.reduce((s, p) => s + parseFloat(p.price || 0), 0) / list.length : 0;
         const lowStock = list.filter(p => (p.stockQuantity ?? 0) < 5).length;
         const topClicked = [...list].sort((a, b) => (b.totalClicks || 0) - (a.totalClicks || 0)).slice(0, 5);
         const topCartAdds = [...list].sort((a, b) => (b.totalCartAdds || 0) - (a.totalCartAdds || 0)).slice(0, 5);
         const maxClicks = topClicked[0]?.totalClicks || 1;
         const maxCartAdds = topCartAdds[0]?.totalCartAdds || 1;
-
 
         const catCounts = list.reduce((acc, p) => {
             const key = p.categoryId || 'Uncategorised';
@@ -1625,7 +1524,7 @@ async function loadAdminProducts() {
         <div class="border border-border bg-surface2 p-5">
           <div class="font-bebas text-[0.9rem] tracking-[0.22em] text-line-bright mb-4">Top Clicked</div>
           <div class="flex flex-col gap-2.5">
-            ${topClicked.map((p, i) => `
+            ${topClicked.map((p) => `
               <div>
                 <div class="flex justify-between mb-1">
                   <span class="text-[0.62rem] tracking-[0.12em] uppercase text-muted truncate max-w-[140px]">${p.name}</span>
@@ -1641,7 +1540,7 @@ async function loadAdminProducts() {
         <div class="border border-border bg-surface2 p-5">
           <div class="font-bebas text-[0.9rem] tracking-[0.22em] text-line-bright mb-4">Top Cart Adds</div>
           <div class="flex flex-col gap-2.5">
-            ${topCartAdds.map((p, i) => `
+            ${topCartAdds.map((p) => `
               <div>
                 <div class="flex justify-between mb-1">
                   <span class="text-[0.62rem] tracking-[0.12em] uppercase text-muted truncate max-w-[140px]">${p.name}</span>
@@ -1697,10 +1596,10 @@ async function loadAdminProducts() {
           </thead>
           <tbody>
             ${list.map(p => {
-            const stockClass = (p.stockQuantity ?? 0) < 5
-                ? 'text-red-300 font-semibold'
-                : (p.stockQuantity ?? 0) < 15 ? 'text-yellow-300' : 'text-emerald-300';
-            return `
+                const stockClass = (p.stockQuantity ?? 0) < 5
+                    ? 'text-red-300 font-semibold'
+                    : (p.stockQuantity ?? 0) < 15 ? 'text-yellow-300' : 'text-emerald-300';
+                return `
               <tr>
                 <td class="${tdClass} font-bebas text-[0.85rem] tracking-[0.1em] text-line-bright">#${p.id}</td>
                 <td class="${tdClass}">${p.name}</td>
@@ -1722,8 +1621,8 @@ async function loadAdminProducts() {
                     <button class="${btnBaseClass} ${btnSmClass} ${btnDangerClass}" data-del-product="${p.id}">Del</button>
                   </div>
                 </td>
-              </tr>`
-        }).join('')}
+              </tr>`;
+            }).join('')}
           </tbody>
         </table>
       </div>`;
@@ -1733,15 +1632,16 @@ async function loadAdminProducts() {
             btn.addEventListener('click', () => openProductModal(JSON.parse(btn.dataset.product)));
         });
         el.querySelectorAll('[data-del-product]').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                if (!confirm('Delete product?')) return;
-                try {
-                    await api(`/products/${btn.dataset.delProduct}`, {method: 'DELETE'});
-                    showToast('Product deleted');
-                    loadAdminProducts();
-                } catch (e) {
-                    showToast(e.message, 'error');
-                }
+            btn.addEventListener('click', () => {
+                confirmDialog('Delete product?', async () => {
+                    try {
+                        await api(`/products/${btn.dataset.delProduct}`, {method: 'DELETE'});
+                        showToast('Product deleted');
+                        loadAdminProducts();
+                    } catch (e) {
+                        showToast(e.message, 'error');
+                    }
+                });
             });
         });
     } catch (e) {

@@ -193,13 +193,32 @@ async function loadTopProducts() {
 function bindTopProductCards(container, topProducts) {
   container.querySelectorAll('[data-product-id]').forEach(card => {
     const id = Number(card.dataset.productId)
+    const uid = await api(`/users/me`);
+    const userId = uid.id;
     const product = topProducts.find(item => item.productId === id)
     card.querySelector('.btn-cart')?.addEventListener('click', event => {
+          api(`/users/${userId}/interactions`, { 
+            method: 'POST', 
+            body: JSON.stringify({
+              productId: product.id || product.productId, 
+              interactionType: 'CART_ADD'
+            }) 
+          }).catch(() => {}); 
       event.stopPropagation()
       addToCart(product)
     })
 
-    card.querySelector('.card-click-area')?.addEventListener('click', () => goToProduct(id))
+    card.querySelector('.card-click-area')?.addEventListener('click', () => {
+          api(`/users/${userId}/interactions`, { 
+            method: 'POST', 
+            body: JSON.stringify({
+              productId: product.id || product.productId, 
+              interactionType: 'CLICK'
+            }) 
+          }).catch(() => {}); 
+          
+          goToProduct(id);
+        });
   })
 
   requestAnimationFrame(() => {
