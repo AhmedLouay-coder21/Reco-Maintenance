@@ -31,5 +31,5 @@ export function showToast(msg, type = 'success') {
     toastTimer = setTimeout(() => {
         toast.style.transform = 'translateX(150%)';
         toast.style.opacity = '0';
-    }, 2200);
+    }, 3000);
 }

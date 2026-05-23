@@ -30,7 +30,7 @@ export function HomeView() {
         Objects channeled from the space between thought and form.<br>For those who feel the frequency.
       </p>
       <div class="flex gap-5 hero-anim-4">
-        <a href="#products" class="relative overflow-hidden px-10 py-4 border border-secondary bg-secondary/10 text-line-bright text-[0.72rem] font-semibold tracking-[0.2em] uppercase rounded-sm transition-all hover:shadow-[0_0_30px_rgba(155,89,247,0.3)] hover:text-white">
+        <a href="/products" class="relative overflow-hidden px-10 py-4 border border-secondary bg-secondary/10 text-line-bright text-[0.72rem] font-semibold tracking-[0.2em] uppercase rounded-sm transition-all hover:shadow-[0_0_30px_rgba(155,89,247,0.3)] hover:text-white">
           Enter RECO →
         </a>
         <a href="#about" class="px-9 py-4 border border-secondary/20 text-[0.72rem] font-semibold tracking-[0.2em] uppercase rounded-sm transition-all hover:text-lavender hover:border-secondary/40 text-muted">

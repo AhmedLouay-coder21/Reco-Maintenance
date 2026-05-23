@@ -1,9 +1,8 @@
 // this file should contain data only
 export const NAV_LINKS = [
+  { href: '/', label: 'Home' },
   { href: '/products', label: 'Browse' },
-  { href: '#about',    label: 'Ritual'  },
-  { href: '#testi',    label: 'Voices'  },
-  { href: '#newsletter', label: 'Channel' },
+  { href: '/About',    label: 'About Us'  },
 ]
 
 export const MARQUEE_ITEMS = [

@@ -737,7 +737,14 @@ function renderCartDrawer() {
     });
 
     document.getElementById('cart-checkout-btn')?.addEventListener('click', () => {
+      if(isAuthenticated() && isTokenValid())
+      {
         window.location.href = '/payment';
+      }
+      else
+      {
+        showToast('You have to be logged in to proceed to payment');
+      }
     });
 }
 

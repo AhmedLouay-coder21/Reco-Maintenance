@@ -64,7 +64,7 @@ function productShell() {
       <div class="relative z-10 flex flex-col gap-6">
         <div class="flex items-center justify-between text-[0.6rem] tracking-[0.3em] uppercase text-muted">
           <a href="/products" class="text-line-bright hover:text-secondary transition-colors">← Back to Catalog</a>
-          <span>Field / Product</span>
+          <span>Field</span>
         </div>
         <div id="product-hero" class="grid gap-3">
           ${loadingTitle('Tuning product signal')}
@@ -234,8 +234,12 @@ function renderProduct(product) {
   });
 
   document.getElementById('product-add-cart')?.addEventListener('click', () => addToCart(product));
-  document.getElementById('product-buy-now')?.addEventListener('click', () => {
-    window.location.href = '/payment';
+  document.getElementById('product-buy-now')?.addEventListener('click', e => {
+    if(isAuthenticated() && isTokenValid())
+    {
+      window.location.href = '/payment';
+    }
+    showToast('You need to be logged in to make a purchase', 'error');
   });
 }
 
@@ -304,7 +308,7 @@ function renderReviewForm() {
       <p class="text-[0.75rem] tracking-[0.2em] uppercase text-muted mb-6">Log in to transmit your review.</p>
       <button id="review-login" class="w-full px-5 py-3 border border-secondary text-line-bright text-[0.7rem] tracking-[0.2em] uppercase hover:bg-secondary/10 transition-all">Log in</button>
     `;
-    document.getElementById('review-login')?.addEventListener('click', Login);
+    document.getElementById('review-login')?.addEventListener('click', () => {  window.location.href = '/login' });
     return;
   }
 

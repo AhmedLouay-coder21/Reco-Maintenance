@@ -74,8 +74,18 @@ function route() {
     return;
   }
   if (path === '/payment') {
-    PaymentView();
-    return;
+    if (isAuthenticated() && isTokenValid())
+    {
+      PaymentView();
+      return;
+    }
+    else
+    {
+      history.pushState({}, '', '/login');
+      showToast('You need to be logged in to proceed to checkout');
+      Login();
+      return;
+    }
   }
   if (path === '/dashboard' && isAuthenticated() && isTokenValid())
   {
@@ -112,14 +122,19 @@ export function GenerateMain()
     ProductsView()
   })
 })
-  document.getElementById('nav-slot').innerHTML = Nav(NAV_LINKS)
+  const nav = document.getElementById("nav-slot");
+  const footer = document.getElementById("footer-slot");
+  if(nav.innerHTML == '')
+  {
+    document.getElementById('nav-slot').innerHTML = Nav(NAV_LINKS)
+  }
   document.getElementById('loginBtn').addEventListener('click', e => {
-  e.preventDefault();
-  history.pushState({}, '', '/login');
-  Login();
+    window.location.href = '/login';
   });
-  document.getElementById('footer-slot').innerHTML = Footer(FOOTER_LINKS)
-  
+  if(footer.innerHTML == '')
+  {
+    document.getElementById('footer-slot').innerHTML = Footer(FOOTER_LINKS)
+  }
   const loginBtn = document.getElementById('loginBtn');
   
   // if the user is logged in then remove the login button and put profile button
@@ -130,9 +145,7 @@ export function GenerateMain()
       loginBtn.id = "UserIcon";
 
       loginBtn.addEventListener("click", e => {
-          e.preventDefault();
-          history.pushState({}, '', '/dashboard');
-          DashboardView();
+        window.location.href = './dashboard';
       });
   }
 

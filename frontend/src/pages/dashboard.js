@@ -190,10 +190,8 @@ function statusPill(s) {
     const map = {
         Pending: 'text-yellow-300 border-yellow-300/80 bg-yellow-400/10',
         Completed: 'text-emerald-300 border-emerald-300/80 bg-emerald-400/10',
-        Cancelled: 'text-red-300 border-red-300/80 bg-red-400/10',
         PENDING: 'text-yellow-300 border-yellow-300/80 bg-yellow-400/10',
         COMPLETED: 'text-emerald-300 border-emerald-300/80 bg-emerald-400/10',
-        CANCELLED: 'text-red-300 border-red-300/80 bg-red-400/10',
         ADMIN: 'text-line-bright border-secondary/70 bg-secondary/10',
         CUSTOMER: 'text-muted border-border/70 bg-surface',
     };
@@ -236,7 +234,6 @@ function navRouter(panels) {
             document.querySelectorAll('.dash-panel').forEach(p => p.classList.add('hidden'));
             const panel = document.getElementById(`panel-${target}`);
             if (panel) panel.classList.remove('hidden');
-            document.getElementById('topbar-title').textContent = el.querySelector('span:last-child')?.textContent || target;
             if (panels[target]) panels[target]();
         });
     });
@@ -265,14 +262,16 @@ async function loadAdminOverview() {
     const el = document.getElementById('panel-overview');
     el.innerHTML = loadingMarkup('Tuning in');
     try {
-        const [prods, cats, usersData] = await Promise.allSettled([
+        const [prods, cats, usersData, orders] = await Promise.allSettled([
             api(`/products`),
             api("/categories"),
             api(`/users`),
+            api(`/orders/all`),
         ]);
         const totalProducts = prods.status === 'fulfilled' ? (prods == 'undefined' ? "0" : prods.value.content.length) : '—';
         const totalCats = cats.status === 'fulfilled' ? (cats == 'undefined' ? "0" : cats.value.length) : '—';
         const totalUsers = usersData.status === 'fulfilled' ? (usersData == 'undefined' ? "0" : usersData.value.length - 1) : '—';
+        const totalOrders = orders.status === 'fulfilled' ? (orders == 'undefined' ? "0" : orders.value.length - 1) : '—';
 
         el.innerHTML = `
       <div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 mb-7">
@@ -297,8 +296,8 @@ async function loadAdminOverview() {
         <div class="relative overflow-hidden border border-border bg-surface2 p-5">
           <div class="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-secondary to-transparent opacity-60"></div>
           <div class="absolute top-4 right-4 text-xl opacity-25">◎</div>
-          <div class="font-bebas text-[2.4rem] text-line-bright leading-none">—</div>
-          <div class="text-[0.62rem] tracking-[0.2em] uppercase text-muted mt-1">Orders Today</div>
+          <div class="font-bebas text-[2.4rem] text-line-bright leading-none">${totalOrders}</div>
+          <div class="text-[0.62rem] tracking-[0.2em] uppercase text-muted mt-1">Total orders</div>
         </div>
       </div>
       <div class="flex items-center justify-between mb-4">
@@ -314,15 +313,41 @@ async function loadAdminOverview() {
 
 async function loadRecentOrders() {
     const el = document.getElementById('admin-recent-orders');
+    const orders = await api('/orders/all');
     if (!el) return;
     try {
-        el.innerHTML = emptyMarkup('Select Orders panel to manage all orders.');
+        const recentOrders = orders
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 10);
+        el.innerHTML = `
+        <div class="${tableWrapClass}">
+          <table class="${tableClass}">
+            <thead>
+              <tr>
+                <th class="${thClass}">Order ID</th>
+                <th class="${thClass}">Total</th>
+                <th class="${thClass}">Status</th>
+                <th class="${thClass}">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${recentOrders.map(o => `
+                <tr>
+                  <td class="${tdClass} font-bebas text-[0.9rem] tracking-[0.1em] text-line-bright">#${o.id}</td>
+                  <td class="${tdClass} text-emerald-300">$${fmtMoney(o.totalAmount)}</td>
+                  <td class="${tdClass}">${statusPill(o.status)}</td>
+                  <td class="${tdClass} text-muted">${fmtDate(o.createdAt)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
     } catch {
-        el.innerHTML = emptyMarkup('—');
+        el.innerHTML = emptyMarkup('Select Orders panel to manage all orders.');;
     }
 }
 
 function openProductModal(product) {
+  console.log(product);
     const isEdit = !!product;
     openModal(`
     <div class="relative w-[min(520px,95vw)] max-h-[90vh] overflow-y-auto border border-border bg-surface2 p-7">
@@ -337,6 +362,7 @@ function openProductModal(product) {
         <div><label class="${labelClass}">Category ID</label><input class="${inputClass}" id="mp-cat" type="number" value="${isEdit ? product.categoryId : ''}"></div>
         <div><label class="${labelClass}">Tags (comma-separated)</label><input class="${inputClass}" id="mp-tags" value="${isEdit ? (product.tags || '') : ''}"></div>
         <div><label class="${labelClass}">Description</label><textarea class="${textareaClass}" id="mp-desc">${isEdit ? (product.description || '') : ''}</textarea></div>
+        <div><label class="${labelClass}">Main Image URL</label><input class="${inputClass}" id="mp-mainImage" value="${isEdit ? (product.mainImageUrl || '') : ''}"></div>
       </div>
       <div class="mt-5 flex justify-end gap-2.5">
         <button class="${btnBaseClass} ${btnMdClass}" id="mp-save">${isEdit ? 'Update' : 'Create'}</button>
@@ -347,10 +373,11 @@ function openProductModal(product) {
         const body = {
             name: document.getElementById('mp-name').value,
             price: parseFloat(document.getElementById('mp-price').value),
-            stock_quantity: parseInt(document.getElementById('mp-stock').value),
-            category_id: parseInt(document.getElementById('mp-cat').value),
+            stockQuantity: parseInt(document.getElementById('mp-stock').value),
+            categoryId: parseInt(document.getElementById('mp-cat').value),
             tags: document.getElementById('mp-tags').value,
             description: document.getElementById('mp-desc').value,
+            mainImageUrl: document.getElementById('mp-mainImage').value,
         };
         try {
             if (isEdit) await api(`/products/${product.id}`, {method: 'PUT', body: JSON.stringify(body)});
@@ -461,7 +488,7 @@ async function loadAdminUsers() {
                 <td class="${tdClass}">${u.username}</td>
                 <td class="${tdClass}">${u.email}</td>
                 <td class="${tdClass}">${statusPill(u.role)}</td>
-                <td class="${tdClass}">${new Date(u.created_at).toLocaleDateString()}</td>
+                <td class="${tdClass}">${new Date(u.createdAt).toLocaleDateString()}</td>
                 <td class="${tdClass}">
                   <button class="${btnBaseClass} ${btnSmClass} ${btnDangerClass}" data-del-user="${u.id}">Delete</button>
                 </td>
@@ -503,12 +530,12 @@ async function loadAdminCache() {
           <tbody>
             ${cache.cacheEntries.map(c => `
               <tr>
-                <td class="${tdClass}">#${c.cache_id}</td>
-                <td class="${tdClass}">${c.user_id}</td>
-                <td class="${tdClass}">${c.product_count}</td>
-                <td class="${tdClass}">${new Date(c.cached_at).toLocaleString()}</td>
-                <td class="${tdClass}">${new Date(c.expires_at).toLocaleString()}</td>
-                <td class="${tdClass}"><button class="${btnBaseClass} ${btnSmClass} ${btnDangerClass}" data-del-cache="${c.cache_id}">Delete</button></td>
+                <td class="${tdClass}">#${c.cacheId}</td>
+                <td class="${tdClass}">${c.userId}</td>
+                <td class="${tdClass}">${c.productCount}</td>
+                <td class="${tdClass}">${new Date(c.cachedAt).toLocaleString()}</td>
+                <td class="${tdClass}">${new Date(c.expiresAt).toLocaleString()}</td>
+                <td class="${tdClass}"><button class="${btnBaseClass} ${btnSmClass} ${btnDangerClass}" data-del-cache="${c.cacheId}">Delete</button></td>
               </tr>`).join('')}
           </tbody>
         </table>
@@ -517,7 +544,7 @@ async function loadAdminCache() {
         document.getElementById('refreshAllBtn').addEventListener('click', async () => {
             try {
                 const r = await api('/recommendations/refresh', {method: 'POST', body: JSON.stringify({})});
-                showToast(`Refreshed ${r.users_refreshed} users, ${r.cache_entries_created} entries`);
+                showToast(`Refreshed ${r.usersRefreshed} users, ${r.cacheEntriesCreated} entries`);
                 loadAdminCache();
             } catch (e) {
                 showToast(e.message, 'error');
@@ -562,7 +589,7 @@ function renderProductGrid(products, container) {
     <div class="border border-border bg-surface2 p-4 transition-colors hover:border-secondary/40">
       <div class="font-bebas text-[1rem] tracking-[0.1em] mb-1">${p.name}</div>
       <div class="text-line-bright text-[0.88rem] font-semibold">$${p.price}</div>
-      <div class="text-[0.65rem] text-muted tracking-[0.1em] mt-1"><span class="text-secondary text-[0.75rem]">${stars(p.avg_rating)}</span> ${(p.avg_rating || 0).toFixed(1)}</div>
+      <div class="text-[0.65rem] text-muted tracking-[0.1em] mt-1"><span class="text-secondary text-[0.75rem]">${stars(p.avgRating)}</span> ${(p.avgRating || 0).toFixed(1)}</div>
       <div class="flex gap-2 mt-3">
         <button class="${btnBaseClass} ${btnSmClass}" data-add-cart="${p.id}">+ Add to Cart</button>
         <button class="${btnBaseClass} ${btnSmClass}" data-view-product="${p.id}">View</button>
@@ -614,8 +641,8 @@ async function openProductDetailModal(productId) {
         <div class="flex justify-between items-start mb-4">
           <div>
             <div class="text-[1.4rem] font-semibold text-line-bright">$${prod.price}</div>
-            <div class="text-[0.72rem] text-muted tracking-widest mt-1">Stock: ${prod.stock_quantity} · Cat: #${prod.category_id}</div>
-            <div class="text-secondary text-[0.75rem] mt-1.5">${stars(prod.avg_rating)} <span class="text-muted text-[0.7rem]">${(prod.avg_rating || 0).toFixed(1)} avg</span></div>
+            <div class="text-[0.72rem] text-muted tracking-widest mt-1">Stock: ${prod.stockQuantity} · Cat: #${prod.categoryId}</div>
+            <div class="text-secondary text-[0.75rem] mt-1.5">${stars(prod.avgRating)} <span class="text-muted text-[0.7rem]">${(prod.avgRating || 0).toFixed(1)} avg</span></div>
           </div>
           <button class="${btnBaseClass} ${btnMdClass}" id="modal-add-cart" data-pid="${prod.id}">+ Add to Cart</button>
         </div>
@@ -654,7 +681,7 @@ async function openProductDetailModal(productId) {
           <div class="mt-5">
             <div class="font-bebas text-[1.1rem] tracking-[0.2em] text-line-bright mb-2.5">Similar Objects</div>
             <div class="flex flex-col gap-2">
-              ${sims.map(s => `<div class="flex items-center gap-3 border border-border bg-surface2 p-3 transition-colors hover:border-secondary/40"><div class="font-bebas text-[1.6rem] text-secondary w-[52px] text-center leading-none">${(s.similarity_score * 100).toFixed(0)}%</div><div class="flex-1"><div class="text-[0.82rem] mb-1">${s.name}</div><div class="text-line-bright text-[0.8rem]">$${s.price}</div></div></div>`).join('')}
+              ${sims.map(s => `<div class="flex items-center gap-3 border border-border bg-surface2 p-3 transition-colors hover:border-secondary/40"><div class="font-bebas text-[1.6rem] text-secondary w-[52px] text-center leading-none">${(s.similarityScore * 100).toFixed(0)}%</div><div class="flex-1"><div class="text-[0.82rem] mb-1">${s.name}</div><div class="text-line-bright text-[0.8rem]">$${s.price}</div></div></div>`).join('')}
             </div>
           </div>` : ''}
       </div>`);
@@ -730,7 +757,7 @@ async function loadRecs() {
               <div class="font-bebas text-[1.6rem] text-secondary w-[52px] text-center leading-none">${(r.recommendationScore).toFixed(0)}%</div>
               <div class="flex-1">
                 <div class="text-[0.82rem] mb-1">${r.name}</div>
-                <div class="text-line-bright text-[0.8rem]">$${r.price} · <span class="text-secondary text-[0.7rem]">${stars(r.avg_rating)}</span></div>
+                <div class="text-line-bright text-[0.8rem]">$${r.price} · <span class="text-secondary text-[0.7rem]">${stars(r.avgRating)}</span></div>
               </div>
               <button class="${btnBaseClass} ${btnSmClass}" data-add-cart="${r.productId}">+ Cart</button>
             </div>`).join('')}
@@ -928,9 +955,9 @@ async function loadCustomerOrders() {
             ${orders.map(o => `
               <tr>
                 <td class="${tdClass}">#${o.id}</td>
-                <td class="${tdClass}">$${fmtMoney(o.totalAmount ?? o.total_amount)}</td>
+                <td class="${tdClass}">$${fmtMoney(o.totalAmount)}</td>
                 <td class="${tdClass}">${statusPill(o.status)}</td>
-                <td class="${tdClass}">${fmtDate(o.createdAt ?? o.created_at)}</td>
+                <td class="${tdClass}">${fmtDate(o.createdAt)}</td>
                 <td class="${tdClass}"><button class="${btnBaseClass} ${btnSmClass}" data-view-order="${o.id}">View</button></td>
               </tr>`).join('')}
           </tbody>
@@ -945,12 +972,12 @@ async function loadCustomerOrders() {
             <div class="relative w-[min(520px,95vw)] max-h-[90vh] overflow-y-auto border border-border bg-surface2 p-7">
               <button class="absolute top-3.5 right-3.5 text-muted text-xl hover:text-line-bright" onclick="document.getElementById('modal-bg').remove()">✕</button>
               <div class="font-bebas text-[1.3rem] tracking-[0.2em] text-line-bright mb-5">Order #${order.id}</div>
-              <div class="mb-4">${statusPill(order.status)} · $${fmtMoney(order.totalAmount ?? order.total_amount)} · ${fmtDate(order.createdAt ?? order.created_at)}</div>
+              <div class="mb-4">${statusPill(order.status)} · $${fmtMoney(order.totalAmount)} · ${fmtDate(order.createdAt)}</div>
               <div class="${tableWrapClass}">
                 <table class="${tableClass}">
                   <thead><tr><th class="${thClass}">Product</th><th class="${thClass}">Qty</th><th class="${thClass}">Price</th></tr></thead>
                   <tbody>
-                    ${(order.items || []).map(i => `<tr><td class="${tdClass}">${i.productName || i.name || '#' + (i.productId ?? i.product_id)}</td><td class="${tdClass}">${i.quantity}</td><td class="${tdClass}">$${fmtMoney(i.priceAtPurchase ?? i.price_at_purchase)}</td></tr>`).join('')}
+                    ${(order.items || []).map(i => `<tr><td class="${tdClass}">${i.productName || i.name || '#' + (i.productId)}</td><td class="${tdClass}">${i.quantity}</td><td class="${tdClass}">$${fmtMoney(i.priceAtPurchase)}</td></tr>`).join('')}
                   </tbody>
                 </table>
               </div>
@@ -987,16 +1014,16 @@ async function loadMyReviews() {
           <tbody>
             ${data.reviews.map(r => `
               <tr>
-                <td class="${tdClass}">${r.product_name || '#' + r.product_id}</td>
+                <td class="${tdClass}">${r.productName || '#' + r.productId}</td>
                 <td class="${tdClass}"><span class="text-secondary text-[0.75rem]">${stars(r.rating)}</span> ${r.rating}/5</td>
                 <td class="${tdClass} max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">${r.comment || '—'}</td>
-                <td class="${tdClass}">${new Date(r.created_at).toLocaleDateString()}</td>
+                <td class="${tdClass}">${new Date(r.createdAt).toLocaleDateString()}</td>
                 <td class="${tdClass}">
-                  <button class="${btnBaseClass} ${btnSmClass}" data-edit-review="${r.review_id}" data-review='${JSON.stringify({
+                  <button class="${btnBaseClass} ${btnSmClass}" data-edit-review="${r.reviewId}" data-review='${JSON.stringify({
             ...r,
             comment: r.comment || ''
         })}'>Edit</button>
-                  <button class="${btnBaseClass} ${btnSmClass} ${btnDangerClass}" data-del-review="${r.review_id}">Delete</button>
+                  <button class="${btnBaseClass} ${btnSmClass} ${btnDangerClass}" data-del-review="${r.reviewId}">Delete</button>
                 </td>
               </tr>`).join('')}
           </tbody>
@@ -1021,7 +1048,7 @@ async function loadMyReviews() {
               <div><label class="${labelClass}">Comment</label><textarea class="${textareaClass}" id="edit-review-comment">${rev.comment}</textarea></div>
             </div>
             <div class="mt-5 flex justify-end gap-2.5">
-              <button class="${btnBaseClass} ${btnMdClass}" id="save-review-btn" data-rid="${rev.review_id}">Save</button>
+              <button class="${btnBaseClass} ${btnMdClass}" id="save-review-btn" data-rid="${rev.reviewId}">Save</button>
             </div>
           </div>`);
 
@@ -1042,7 +1069,7 @@ async function loadMyReviews() {
                     const rating = parseInt(document.getElementById('edit-review-rating').value);
                     const comment = document.getElementById('edit-review-comment').value;
                     try {
-                        await api(`/reviews/${rev.review_id}`, {
+                        await api(`/reviews/${rev.reviewId}`, {
                             method: 'PUT',
                             body: JSON.stringify({rating, comment})
                         });
@@ -1091,7 +1118,7 @@ async function loadProfile() {
       <div><label class="${labelClass}">Last Name</label><input class="${inputClass}" id="p-lastName" value="${user.lastName}"></div>
         <div><label class="${labelClass}">Username</label><input class="${inputClass}" id="p-username" value="${user.username}"></div>
         <div><label class="${labelClass}">Email</label><input class="${inputClass}" id="p-email" value="${user.email}"></div>
-        <div class="text-[0.65rem] text-muted tracking-widest">Member since: ${new Date(user.created_at).toLocaleDateString()}</div>
+        <div class="text-[0.65rem] text-muted tracking-widest">Member since: ${new Date(user.createdAt).toLocaleDateString()}</div>
         <div><button class="${btnBaseClass} ${btnMdClass}" id="save-profile-btn">Save Changes</button></div>
         <hr class="border-border my-2">
         <div><button class="${btnBaseClass} ${btnMdClass} ${btnDangerClass}" id="delete-account-btn">Delete Account</button></div>
@@ -1246,39 +1273,43 @@ async function loadNotifications() {
 async function loadAdminOrders() {
     const el = document.getElementById('panel-orders');
     el.innerHTML = loadingMarkup('Loading orders');
-    const products = await api('/orders/total');
+    const products = await api(`/orders/all`);
+    const totalRevenue = products.reduce((sum, products) => sum + (products.totalAmount || 0), 0);
+    let completed = 0;
+    let pending = 0;
+    products.forEach((order) =>
+    {
+      if(order.status == 'COMPLETED')
+        completed++;
+      else if(order.status == 'PENDING')
+        pending++;
+    });
 
     el.innerHTML = `
     <div class="mb-6 grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
       <div class="relative overflow-hidden border border-border bg-surface2 p-5">
         <div class="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-secondary to-transparent opacity-60"></div>
         <div class="absolute top-4 right-4 text-xl opacity-15">▣</div>
-        <div class="font-bebas text-[2.4rem] text-line-bright leading-none" id="od-total">${products.content.length}</div>
+        <div class="font-bebas text-[2.4rem] text-line-bright leading-none" id="od-total">${products.length}</div>
         <div class="text-[0.62rem] tracking-[0.2em] uppercase text-muted mt-1">Total Orders</div>
       </div>
       <div class="relative overflow-hidden border border-border bg-surface2 p-5">
         <div class="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-secondary to-transparent opacity-60"></div>
         <div class="absolute top-4 right-4 text-xl opacity-15">$</div>
-        <div class="font-bebas text-[2.4rem] text-line-bright leading-none" id="od-revenue">${products.content.length}</div>
+        <div class="font-bebas text-[2.4rem] text-line-bright leading-none" id="od-revenue">${totalRevenue}</div>
         <div class="text-[0.62rem] tracking-[0.2em] uppercase text-muted mt-1">Revenue</div>
       </div>
       <div class="relative overflow-hidden border border-border bg-surface2 p-5">
         <div class="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-40"></div>
         <div class="absolute top-4 right-4 text-xl opacity-15">✓</div>
-        <div class="font-bebas text-[2.4rem] text-emerald-300 leading-none" id="od-completed">${products.content.length}</div>
+        <div class="font-bebas text-[2.4rem] text-emerald-300 leading-none" id="od-completed">${completed}</div>
         <div class="text-[0.62rem] tracking-[0.2em] uppercase text-muted mt-1">Completed</div>
       </div>
       <div class="relative overflow-hidden border border-border bg-surface2 p-5">
         <div class="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-yellow-400 to-transparent opacity-40"></div>
         <div class="absolute top-4 right-4 text-xl opacity-15">◌</div>
-        <div class="font-bebas text-[2.4rem] text-yellow-300 leading-none" id="od-pending">${products.content.length}</div>
+        <div class="font-bebas text-[2.4rem] text-yellow-300 leading-none" id="od-pending">${pending}</div>
         <div class="text-[0.62rem] tracking-[0.2em] uppercase text-muted mt-1">Pending</div>
-      </div>
-      <div class="relative overflow-hidden border border-border bg-surface2 p-5">
-        <div class="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-red-400 to-transparent opacity-40"></div>
-        <div class="absolute top-4 right-4 text-xl opacity-15">✕</div>
-        <div class="font-bebas text-[2.4rem] text-red-300 leading-none" id="od-cancelled">${products.content.length}</div>
-        <div class="text-[0.62rem] tracking-[0.2em] uppercase text-muted mt-1">Cancelled</div>
       </div>
     </div>
 
@@ -1305,6 +1336,7 @@ async function loadAdminOrders() {
 
     document.getElementById('order-search-btn').addEventListener('click', async () => {
         const uid = document.getElementById('order-uid').value.trim();
+        
         if (!uid) return;
         const res = document.getElementById('orders-result');
         res.innerHTML = loadingMarkup('Loading');
@@ -1320,20 +1352,11 @@ async function loadAdminOrders() {
             const total = orders.length;
             const completed = orders.filter(o => statusKey(o.status) === 'COMPLETED').length;
             const pending = orders.filter(o => statusKey(o.status) === 'PENDING').length;
-            const cancelled = orders.filter(o => statusKey(o.status) === 'CANCELLED').length;
-            const revenue = orders.reduce((s, o) => s + (Number(o.totalAmount ?? o.total_amount) || 0), 0);
-
-            document.getElementById('od-total').textContent = total;
-            document.getElementById('od-completed').textContent = completed;
-            document.getElementById('od-pending').textContent = pending;
-            document.getElementById('od-cancelled').textContent = cancelled;
-            document.getElementById('od-revenue').textContent = `$${revenue.toFixed(0)}`;
-
+            const revenue = orders.reduce((s, o) => s + (Number(o.totalAmount) || 0), 0);
 
             const statuses = [
                 {label: 'Completed', count: completed, color: 'bg-emerald-400', text: 'text-emerald-300'},
                 {label: 'Pending', count: pending, color: 'bg-yellow-400', text: 'text-yellow-300'},
-                {label: 'Cancelled', count: cancelled, color: 'bg-red-400', text: 'text-red-300'},
             ];
             document.getElementById('od-bar-chart').innerHTML = statuses.map(s => `
         <div>
@@ -1350,21 +1373,126 @@ async function loadAdminOrders() {
             const revByStatus = [
                 {
                     label: 'Completed',
-                    val: orders.filter(o => statusKey(o.status) === 'COMPLETED').reduce((s, o) => s + (Number(o.totalAmount ?? o.total_amount) || 0), 0),
+                    val: orders.filter(o => statusKey(o.status) === 'COMPLETED').reduce((s, o) => s + (Number(o.totalAmount) || 0), 0),
                     color: 'bg-secondary',
                     text: 'text-line-bright'
                 },
                 {
                     label: 'Pending',
-                    val: orders.filter(o => statusKey(o.status) === 'PENDING').reduce((s, o) => s + (Number(o.totalAmount ?? o.total_amount) || 0), 0),
+                    val: orders.filter(o => statusKey(o.status) === 'PENDING').reduce((s, o) => s + (Number(o.totalAmount) || 0), 0),
                     color: 'bg-yellow-400',
                     text: 'text-yellow-300'
                 },
+            ];
+            const maxRev = Math.max(...revByStatus.map(r => r.val), 1);
+            console.log(maxRev);
+            console.log(revByStatus);
+            document.getElementById('od-rev-chart').innerHTML = revByStatus.map(r => `
+        <div>
+          <div class="flex justify-between mb-1">
+            <span class="text-[0.62rem] tracking-[0.15em] uppercase text-muted">${r.label}</span>
+            <span class="text-[0.62rem] tracking-[0.12em] ${r.text}">$${r.val.toFixed(0)}</span>
+          </div>
+          <div class="h-[5px] bg-border/30 border border-border/40 overflow-hidden">
+            <div class="h-full ${r.color} opacity-70 transition-all duration-700" style="width:${(r.val / maxRev * 100).toFixed(1)}%"></div>
+          </div>
+        </div>`).join('');
+
+
+            res.innerHTML = `
+        <div class="${tableWrapClass}">
+          <table class="${tableClass}">
+            <thead>
+              <tr>
+                <th class="${thClass}">Order ID</th>
+                <th class="${thClass}">Total</th>
+                <th class="${thClass}">Status</th>
+                <th class="${thClass}">Date</th>
+                <th class="${thClass}">Update Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${orders.map(o => `
+                <tr>
+                  <td class="${tdClass} font-bebas text-[0.9rem] tracking-[0.1em] text-line-bright">#${o.id}</td>
+                  <td class="${tdClass} text-emerald-300">$${fmtMoney(o.totalAmount)}</td>
+                  <td class="${tdClass}">${statusPill(o.status)}</td>
+                  <td class="${tdClass} text-muted">${fmtDate(o.createdAt)}</td>
+                  <td class="${tdClass}">
+                    <div class="flex items-center gap-2">
+                      <select class="${selectSmClass} w-auto" data-order-id="${o.id}">
+                        <option value="PENDING" ${statusKey(o.status) === 'PENDING' ? 'selected' : ''}>Pending</option>
+                        <option value="COMPLETED" ${statusKey(o.status) === 'COMPLETED' ? 'selected' : ''}>Completed</option>
+                      </select>
+                      <button class="${btnBaseClass} ${btnSmClass}" data-update-order="${o.id}">Set</button>
+                    </div>
+                  </td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+
+            res.querySelectorAll('[data-update-order]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const sel = res.querySelector(`select[data-order-id="${btn.dataset.updateOrder}"]`);
+                    try {
+                        await api(`/orders/${btn.dataset.updateOrder}/status`, {
+                            method: 'PUT',
+                            body: JSON.stringify({status: sel.value})
+                        });
+                        showToast('Order status updated');
+                        document.getElementById('order-search-btn').click();
+                    } catch (e) {
+                        showToast(e.message, 'error');
+                    }
+                });
+            });
+        } catch (e) {
+            res.innerHTML = emptyMarkup(e.message);
+        }
+    });
+    const res = document.getElementById('orders-result');
+        res.innerHTML = loadingMarkup('Loading');
+        try {
+            const orders = Array.isArray(products) ? products : (products?.content || []);
+            if (!orders.length) {
+                res.innerHTML = emptyMarkup('No orders found');
+                return;
+            }
+            
+            const total = orders.length;
+            const completed = orders.filter(o => statusKey(o.status) === 'COMPLETED').length;
+            const pending = orders.filter(o => statusKey(o.status) === 'PENDING').length;
+            const revenue = orders.reduce((s, o) => s + (Number(o.totalAmount) || 0), 0);
+
+            const statuses = [
+                {label: 'Completed', count: completed, color: 'bg-emerald-400', text: 'text-emerald-300'},
+                {label: 'Pending', count: pending, color: 'bg-yellow-400', text: 'text-yellow-300'},
+            ];
+            document.getElementById('od-bar-chart').innerHTML = statuses.map(s => `
+        <div>
+          <div class="flex justify-between mb-1">
+            <span class="text-[0.62rem] tracking-[0.15em] uppercase text-muted">${s.label}</span>
+            <span class="text-[0.62rem] tracking-[0.12em] ${s.text}">${s.count} · ${total ? ((s.count / total) * 100).toFixed(0) : 0}%</span>
+          </div>
+          <div class="h-[5px] bg-border/30 border border-border/40 overflow-hidden">
+            <div class="h-full ${s.color} opacity-70 transition-all duration-700" style="width:${total ? (s.count / total * 100).toFixed(1) : 0}%"></div>
+          </div>
+        </div>`).join('');
+
+
+            const revByStatus = [
                 {
-                    label: 'Cancelled',
-                    val: orders.filter(o => statusKey(o.status) === 'CANCELLED').reduce((s, o) => s + (Number(o.totalAmount ?? o.total_amount) || 0), 0),
-                    color: 'bg-red-400',
-                    text: 'text-red-300'
+                    label: 'Completed',
+                    val: orders.filter(o => statusKey(o.status) === 'COMPLETED').reduce((s, o) => s + (Number(o.totalAmount) || 0), 0),
+                    color: 'bg-secondary',
+                    text: 'text-line-bright'
+                },
+                {
+                    label: 'Pending',
+                    val: orders.filter(o => statusKey(o.status) === 'PENDING').reduce((s, o) => s + (Number(o.totalAmount) || 0), 0),
+                    color: 'bg-yellow-400',
+                    text: 'text-yellow-300'
                 },
             ];
             const maxRev = Math.max(...revByStatus.map(r => r.val), 1);
@@ -1396,15 +1524,14 @@ async function loadAdminOrders() {
               ${orders.map(o => `
                 <tr>
                   <td class="${tdClass} font-bebas text-[0.9rem] tracking-[0.1em] text-line-bright">#${o.id}</td>
-                  <td class="${tdClass} text-emerald-300">$${fmtMoney(o.totalAmount ?? o.total_amount)}</td>
+                  <td class="${tdClass} text-emerald-300">$${fmtMoney(o.totalAmount)}</td>
                   <td class="${tdClass}">${statusPill(o.status)}</td>
-                  <td class="${tdClass} text-muted">${fmtDate(o.createdAt ?? o.created_at)}</td>
+                  <td class="${tdClass} text-muted">${fmtDate(o.createdAt)}</td>
                   <td class="${tdClass}">
                     <div class="flex items-center gap-2">
                       <select class="${selectSmClass} w-auto" data-order-id="${o.id}">
                         <option value="PENDING" ${statusKey(o.status) === 'PENDING' ? 'selected' : ''}>Pending</option>
                         <option value="COMPLETED" ${statusKey(o.status) === 'COMPLETED' ? 'selected' : ''}>Completed</option>
-                        <option value="CANCELLED" ${statusKey(o.status) === 'CANCELLED' ? 'selected' : ''}>Cancelled</option>
                       </select>
                       <button class="${btnBaseClass} ${btnSmClass}" data-update-order="${o.id}">Set</button>
                     </div>
@@ -1432,7 +1559,6 @@ async function loadAdminOrders() {
         } catch (e) {
             res.innerHTML = emptyMarkup(e.message);
         }
-    });
 }
 
 
