@@ -91,9 +91,9 @@ The frontend will start on `http://localhost:5173`. Open this URL in your browse
     ├── src/
     │   ├── pages/           # Page components
     │   ├── api/             # API client
-    │   ├── components/       # Ready reuseable UI components
-    │   ├── data/             # Dummy data
-    │   ├── assets/           # Website assets
+    │   ├── components/      # Ready reuseable UI components
+    │   ├── data/            # Dummy data
+    │   ├── assets/          # Website assets
     │   └── utils/           # Helpers
     │ 
     ├── index.html
