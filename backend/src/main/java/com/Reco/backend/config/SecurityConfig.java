@@ -50,8 +50,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/reviews/product/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/recommendations/popular").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/recommendations/products/**").permitAll()
-                        .anyRequest()
-                        .authenticated()
+                        .requestMatchers("/api/**").authenticated()
+                        .anyRequest().permitAll()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

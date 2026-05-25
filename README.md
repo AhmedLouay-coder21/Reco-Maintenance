@@ -28,7 +28,8 @@ RECO goes beyond standard e-commerce by dynamically predicting user preferences 
 * Java 17+
 * Spring Boot (WebMVC, Data JPA, Security)
 * PostgreSQL (Relational Database)
-* Flyway (Database Migrations)
+
+
 * JJWT (JSON Web Token Authentication)
 
 **Frontend:**
@@ -57,7 +58,8 @@ CREATE DATABASE reco_db;
 Navigate to the backend directory and run the Spring Boot application using the Maven wrapper:
 ```bash
 cd backend
-./mvnw spring-boot:run
+./mvnw spring-boot:run        # Linux/macOS
+mvnw.cmd spring-boot:run      # Windows
 ```
 The backend will start on `http://localhost:8080`.
 *API Documentation (Swagger UI) is automatically generated and available at `http://localhost:8080/swagger-ui/index.html`.*
@@ -70,6 +72,15 @@ npm install
 npm run dev
 ```
 The frontend will start on `http://localhost:5173`. Open this URL in your browser to experience RECO.
+
+### Alternative: Unified JAR (Production)
+Instead of running two servers, you can build everything into a single JAR:
+```bash
+./mvnw clean package -DskipTests        # Linux/macOS
+mvnw.cmd clean package -DskipTests      # Windows
+java -jar backend/target/*.jar
+```
+The application will be available at `http://localhost:8080` with both the frontend and API served from the same port. No separate frontend server needed.
 
 ## Project Structure
 
@@ -107,10 +118,10 @@ The frontend will start on `http://localhost:5173`. Open this URL in your browse
 RECO is designed as a decoupled full-stack system:
 * **Frontend:** A lightweight, highly optimized Single Page Application (SPA) driven by Vanilla JS routing, dynamic DOM injection, and `IntersectionObserver` for scroll-reveal animations.
 * **Backend:** A standard Layered Spring Boot REST API (Controller → Service → Repository).
-* **Database:** PostgreSQL with Flyway for version-controlled schema migrations.
+* **Database:** PostgreSQL.
 
 ### Key Backend Modules:
-1. **Security & Auth:** Custom JWT implementation with Access and Refresh tokens.
+1. **Security & Auth:** Custom JWT implementation with Access tokens and role-based authorization.
 2. **Category & Stock:** Real-time stock control and product lifecycle management.
 3. **Order Processing:** Cart lifecycle, order persistence, and mock payment gateway routing.
 4. **Recommendation Engine:** Interaction tracking (clicks, adds) and multi-strategy algorithmic product suggestions.
