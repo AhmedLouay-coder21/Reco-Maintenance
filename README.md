@@ -74,12 +74,30 @@ The frontend will start on `http://localhost:5173`. Open this URL in your browse
 ## Project Structure
 
 ```text
-├── backend/          # Spring Boot REST API
-│   ├── src/main/     # Java source code & application.properties
-│   └── pom.xml       # Maven dependencies
-└── frontend/         # Vite + Vanilla JS application
-    ├── src/          # UI components, JS modules, styles
-    └── package.json  # NPM dependencies
+├── backend/
+│   ├── src/main/java/com/Reco/backend/
+│   │   ├── config/          # Security, JWT, CORS
+│   │   ├── controller/      # REST endpoints
+│   │   ├── service/         # Business logic
+│   │   ├── repository/      # Data access
+│   │   ├── model/           # JPA entities
+│   │   ├── dto/             # Request/Response DTOs
+│   │   ├── recommendation/  # Strategy pattern engine
+│   │   └── exception/       # Error handling
+│   ├── src/main/resources/
+│   │   └── application.properties
+│   └── pom.xml
+└── frontend/
+    ├── src/
+    │   ├── pages/           # Page components
+    │   ├── api/             # API client
+    │   ├── components/       # Ready reuseable UI components
+    │   ├── data/             # Dummy data
+    │   ├── assets/           # Website assets
+    │   └── utils/           # Helpers
+    │ 
+    ├── index.html
+    └── package.json
 ```
 
 ---
