@@ -10,6 +10,7 @@ const state = {
   reviewTotalPages: 0,
   reviewTotal: 0,
   frequentlyBought: [],
+  cart: [],
 };
 
 export async function ProductView() {
@@ -17,6 +18,8 @@ export async function ProductView() {
 
   const app = document.getElementById('app');
   app.innerHTML = productShell();
+  bindCartEvents();
+  await loadCart();
 
   const params = new URLSearchParams(window.location.search);
   const id = Number(params.get('id'));
@@ -95,6 +98,28 @@ function productShell() {
         ${loadingBlock('Scanning related product clusters')}
       </div>
     </section>
+
+    <button id="cart-fab"
+      class="fixed bottom-8 right-8 z-[150] w-14 h-14 rounded-full border-2 border-secondary bg-main/80 backdrop-blur-lg
+             flex items-center justify-center text-xl text-line-bright
+             shadow-[0_0_20px_rgba(155,89,247,.3)] hover:shadow-[0_0_40px_rgba(155,89,247,.5)] hover:scale-110
+             transition-all duration-300 group">
+      ⬡
+      <span id="cart-badge"
+        class="absolute -top-1 -right-1 min-w-[20px] h-5 rounded-full bg-secondary text-white font-bold text-[0.6rem] flex items-center justify-center px-1 hidden">
+        0
+      </span>
+    </button>
+
+    <div id="cart-overlay" class="fixed inset-0 z-[200] pointer-events-none">
+      <div id="cart-backdrop" class="absolute inset-0 bg-main/0 backdrop-blur-none transition-all duration-500"></div>
+      <div id="cart-drawer"
+           class="absolute top-0 right-0 h-full w-full max-w-[400px] bg-surface border-l border-border
+                  translate-x-full transition-transform duration-500 ease-[cubic-bezier(.16,1,.3,1)]
+                  flex flex-col overflow-hidden">
+        <div id="cart-content" class="flex flex-col h-full"></div>
+      </div>
+    </div>
   `;
 }
 
@@ -444,11 +469,175 @@ async function addToCart(product) {
   }
 
   try {
-    await api('/cart/items', { method: 'POST', body: JSON.stringify({ productId: product.id, quantity: 1 }) });
-    showToast('Added to cart');
+    const cartResponse = await api('/cart/items', {
+      method: 'POST',
+      body: JSON.stringify({ productId: product.id, quantity: 1 }),
+    });
+    state.cart = cartResponse?.items || [];
+    updateCartBadge();
+    showToast(`${product.name} added to cart`);
   } catch (err) {
     showToast(err?.message || 'Failed to add item', 'error');
   }
+}
+
+async function loadCart() {
+  if (!isAuthenticated() || !isTokenValid()) {
+    state.cart = [];
+    updateCartBadge();
+    return;
+  }
+
+  try {
+    const cartResponse = await api('/cart');
+    state.cart = cartResponse?.items || [];
+    updateCartBadge();
+  } catch (_) {
+    state.cart = [];
+    updateCartBadge();
+  }
+}
+
+function bindCartEvents() {
+  document.getElementById('cart-fab')?.addEventListener('click', openCart);
+  document.getElementById('cart-backdrop')?.addEventListener('click', closeCart);
+}
+
+function updateCartBadge() {
+  const badge = document.getElementById('cart-badge');
+  if (!badge) return;
+
+  const total = state.cart.reduce((sum, item) => sum + item.quantity, 0);
+  badge.textContent = total;
+  badge.classList.toggle('hidden', total === 0);
+}
+
+function openCart() {
+  const overlay = document.getElementById('cart-overlay');
+  const backdrop = document.getElementById('cart-backdrop');
+  const drawer = document.getElementById('cart-drawer');
+  if (!overlay || !backdrop || !drawer) return;
+
+  overlay.style.pointerEvents = 'all';
+  backdrop.style.background = 'rgba(4,1,10,0.7)';
+  backdrop.style.backdropFilter = 'blur(4px)';
+  drawer.classList.remove('translate-x-full');
+  drawer.classList.add('translate-x-0');
+  loadCart().then(renderCartDrawer);
+}
+
+function closeCart() {
+  const overlay = document.getElementById('cart-overlay');
+  const backdrop = document.getElementById('cart-backdrop');
+  const drawer = document.getElementById('cart-drawer');
+  if (!overlay || !backdrop || !drawer) return;
+
+  overlay.style.pointerEvents = 'none';
+  backdrop.style.background = 'rgba(4,1,10,0)';
+  backdrop.style.backdropFilter = 'blur(0px)';
+  drawer.classList.remove('translate-x-0');
+  drawer.classList.add('translate-x-full');
+}
+
+async function removeFromCart(id) {
+  if (!isAuthenticated() || !isTokenValid()) {
+    showToast('Please log in to use the cart');
+    return;
+  }
+
+  try {
+    await api(`/cart/items/${id}`, { method: 'DELETE' });
+    state.cart = state.cart.filter(item => item.productId !== id);
+    updateCartBadge();
+    renderCartDrawer();
+    showToast('Item removed');
+  } catch (err) {
+    showToast(err?.message || 'Failed to remove item');
+  }
+}
+
+async function updateCartQty(id, delta) {
+  const item = state.cart.find(cartItem => cartItem.productId === id);
+  if (!item) return;
+
+  if (!isAuthenticated() || !isTokenValid()) {
+    showToast('Please log in to use the cart');
+    return;
+  }
+
+  try {
+    const cartResponse = await api(`/cart/items/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ quantity: Math.max(1, item.quantity + delta) }),
+    });
+    state.cart = cartResponse?.items || [];
+    updateCartBadge();
+    renderCartDrawer();
+  } catch (err) {
+    showToast(err?.message || 'Failed to update quantity');
+  }
+}
+
+function renderCartDrawer() {
+  const content = document.getElementById('cart-content');
+  if (!content) return;
+
+  const total = state.cart.reduce((sum, item) => sum + parseFloat(item.unitPrice) * item.quantity, 0);
+
+  content.innerHTML = `
+    <div class="flex items-center justify-between px-7 py-5 border-b border-border shrink-0 bg-surface">
+      <div class="font-bebas text-2xl tracking-[0.2em] text-line-bright">YOUR CART</div>
+      <button id="cart-close" class="w-8 h-8 border border-border flex items-center justify-center text-muted hover:border-secondary hover:text-line-bright transition-all text-lg">×</button>
+    </div>
+    <div class="flex-1 overflow-y-auto">
+      ${state.cart.length === 0
+        ? `<div class="h-full flex flex-col items-center justify-center gap-4 py-20 text-center px-7">
+             <div class="font-bebas text-6xl text-border">⬡</div>
+             <div class="font-josefin text-[0.72rem] tracking-[0.2em] uppercase text-muted">Your cart is empty</div>
+           </div>`
+        : state.cart.map(item => `
+            <div class="flex gap-4 px-7 py-5 border-b border-border hover:bg-surface2/50 transition-colors">
+              <div class="w-16 h-16 shrink-0 bg-surface2 border border-border overflow-hidden flex items-center justify-center">
+                <img src="${item.mainImageUrl}" alt="${item.name}"
+                  class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 group-hover:brightness-110"
+                  loading="lazy" onerror="this.parentElement.innerHTML='<span class=\\'font-bebas text-6xl text-border\\'>⬡</span>'">
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-josefin text-[0.78rem] tracking-[0.1em] uppercase mb-1 truncate">${item.productName}</div>
+                <div class="text-lavender font-semibold">$${parseFloat(item.lineTotal).toFixed(2)}</div>
+                <div class="flex items-center gap-2 mt-2">
+                  <button class="cart-qty-btn w-6 h-6 border border-border text-muted hover:border-secondary hover:text-line-bright flex items-center justify-center text-sm transition-all" data-id="${item.productId}" data-delta="-1">−</button>
+                  <span class="font-space text-[0.7rem] text-line-bright w-4 text-center">${item.quantity}</span>
+                  <button class="cart-qty-btn w-6 h-6 border border-border text-muted hover:border-secondary hover:text-line-bright flex items-center justify-center text-sm transition-all" data-id="${item.productId}" data-delta="1">+</button>
+                  <button class="cart-remove-btn ml-auto text-muted hover:text-red-300 transition-colors text-[0.7rem] tracking-widest uppercase" data-id="${item.productId}">Remove</button>
+                </div>
+              </div>
+            </div>`).join('')}
+    </div>
+    <div class="shrink-0 px-7 py-5 border-t border-border bg-surface">
+      <div class="flex justify-between items-center mb-4">
+        <span class="font-space text-[0.65rem] tracking-[0.2em] uppercase text-muted">Total</span>
+        <span class="font-bebas text-3xl text-lavender">$${total.toFixed(2)}</span>
+      </div>
+      <button id="cart-checkout-btn" class="w-full py-4 border border-secondary bg-secondary/10 text-line-bright font-semibold text-[0.72rem] tracking-[0.2em] uppercase hover:bg-secondary/20 hover:shadow-[0_0_30px_rgba(155,89,247,.3)] active:scale-[.99] transition-all">
+        Proceed to Checkout →
+      </button>
+    </div>`;
+
+  document.getElementById('cart-close')?.addEventListener('click', closeCart);
+  content.querySelectorAll('.cart-qty-btn').forEach(button => {
+    button.addEventListener('click', () => updateCartQty(Number(button.dataset.id), Number(button.dataset.delta)));
+  });
+  content.querySelectorAll('.cart-remove-btn').forEach(button => {
+    button.addEventListener('click', () => removeFromCart(Number(button.dataset.id)));
+  });
+  document.getElementById('cart-checkout-btn')?.addEventListener('click', () => {
+    if (isAuthenticated() && isTokenValid()) {
+      window.location.href = '/payment';
+    } else {
+      showToast('You have to be logged in to proceed to payment');
+    }
+  });
 }
 
 function renderStars(avg) {

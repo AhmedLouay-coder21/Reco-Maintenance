@@ -1,1 +1,4 @@
 .idea/
+
+# Local frontend runtime
+frontend/node/
