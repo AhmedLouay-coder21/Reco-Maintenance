@@ -256,3 +256,104 @@ hr {
 .products-hero {
   background: linear-gradient(to bottom, var(--color-main), transparent);
 }
+
+@media (max-width: 767px) {
+  .home-page {
+    overflow-x: hidden;
+  }
+
+  .home-page .hero {
+    min-height: 720px;
+    padding: 7rem 1rem 6rem;
+  }
+
+  .home-page .hero > p:first-child {
+    max-width: 18rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
+    line-height: 1.7;
+  }
+
+  .home-page .hero-title {
+    font-size: clamp(4.5rem, 25vw, 7rem);
+    margin-bottom: 1.25rem;
+  }
+
+  .home-page .hero > p:nth-of-type(2) {
+    max-width: 19rem;
+    margin-bottom: 2rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    line-height: 1.8;
+  }
+
+  .home-page .hero-anim-4 {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .home-page .hero-anim-4 a {
+    width: min(100%, 19rem);
+    padding: 0.9rem 1rem;
+    margin-inline: auto;
+  }
+
+  .home-page .marquee-wrap {
+    padding-block: 0.75rem;
+  }
+
+  .home-page .marquee-track {
+    gap: 2rem;
+    animation-duration: 18s;
+  }
+
+  .home-page > .feat-item,
+  .home-page .feat-item {
+    padding: 1.5rem;
+  }
+
+  .home-page > .max-w-\[90\%\] {
+    max-width: calc(100% - 2rem);
+    margin-top: 3rem;
+  }
+
+  .home-page section.px-6 {
+    padding-inline: 1rem;
+  }
+
+  .home-page section.py-16 {
+    padding-block: 3.5rem;
+  }
+
+  .home-page section#testi {
+    padding-block: 4rem;
+  }
+
+  .home-page section#testi h2 {
+    font-size: clamp(2.5rem, 12vw, 4rem);
+    line-height: 0.95;
+  }
+
+  .home-page .testi-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .home-page .testi-featured {
+    padding: 2rem 1.25rem;
+  }
+
+  .home-page .testi-stack > * {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .home-page #cart-fab {
+    right: 1rem;
+    bottom: 1rem;
+  }
+
+  .home-page #cart-drawer {
+    max-width: none;
+  }
+}

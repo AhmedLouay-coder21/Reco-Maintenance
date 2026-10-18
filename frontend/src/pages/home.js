@@ -18,6 +18,7 @@ export function HomeView() {
   }, 0)
 
   return `
+    <main class="home-page">
     <!-- HERO -->
     <section class="hero min-h-screen flex flex-col items-center justify-center text-center px-6 relative z-10 pt-20">
       <p class="font-space text-[0.7rem] tracking-[0.3em] uppercase text-secondary mb-8 hero-anim-1">
@@ -130,6 +131,7 @@ export function HomeView() {
         </div>
       </div>
     </section>
+    </main>
   `
 }
 

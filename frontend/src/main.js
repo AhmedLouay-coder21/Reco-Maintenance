@@ -3,7 +3,7 @@ import {
   NAV_LINKS, FOOTER_LINKS, PRODUCTS
 } from './data/data.js'
 import {
-  Nav, Footer, ProductCard
+  Nav, Footer, ProductCard, bindMobileNav
 } from './components/components.js'
 import { Login } from './pages/login.js'
 import { HomeView } from './pages/home.js'
@@ -128,6 +128,7 @@ export function GenerateMain()
   {
     document.getElementById('nav-slot').innerHTML = Nav(NAV_LINKS)
   }
+  bindMobileNav()
   document.getElementById('loginBtn').addEventListener('click', e => {
     window.location.href = '/login';
   });
