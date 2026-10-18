@@ -1,18 +1,16 @@
 import {
   MARQUEE_ITEMS, FEATURES,
-  STATS, TESTIMONIALS
+  STATS
 } from '../data/data.js'
 import {
   Marquee, FeatureCard,
-  StatCard, TestimonialFeatured, TestimonialCard
+  StatCard
 } from '../components/components.js'
 import { api, isAuthenticated, isTokenValid } from '../api/auth.js'
 import { showToast } from '../utils/alert.js'
 import { addToCart, bindEvents, fetchCategories, goToProduct, loadCart, productCard, skeletonGrid } from './products.js'
 
 export function HomeView() {
-  const [featured, ...rest] = TESTIMONIALS
-
   setTimeout(() => {
     void initHomePage()
   }, 0)
@@ -123,10 +121,9 @@ export function HomeView() {
           VOICES FROM <span class="text-line-bright drop-shadow-[0_0_30px_rgba(155,89,247,0.4)]">THE</span><br>OTHER SIDE
         </h2>
       </div>
-      <div class="testi-grid reveal grid grid-cols-1 lg:grid-cols-[1fr_1.6fr] border border-border overflow-hidden">
-        ${TestimonialFeatured(featured)}
-        <div class="testi-stack flex flex-col gap-[1px] bg-border">
-          ${rest.map(t => TestimonialCard(t)).join('')}
+      <div id="top-reviews-container" class="reveal border border-border overflow-hidden">
+        <div class="p-10 text-center text-[0.72rem] tracking-[0.2em] uppercase text-muted">
+          Loading top reviews...
         </div>
       </div>
     </section>
@@ -150,7 +147,51 @@ async function initHomePage() {
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el))
 
   await loadTopProducts()
+  await loadTopReviews()
   bindEvents()
+}
+
+async function loadTopReviews() {
+  const container = document.getElementById('top-reviews-container')
+  if (!container) return
+
+  try {
+    const reviews = await api('/reviews/top?limit=4')
+
+    if (!Array.isArray(reviews) || !reviews.length) {
+      container.innerHTML = `
+        <div class="p-10 text-center text-[0.72rem] tracking-[0.2em] uppercase text-muted">
+          No reviews available yet.
+        </div>`
+      return
+    }
+
+    container.innerHTML = `
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-px bg-border">
+        ${reviews.map(review => `
+          <article class="bg-main p-8">
+            <p class="text-[0.9rem] font-light leading-relaxed text-lavender">${escapeHtml(review.comment || '')}</p>
+            <p class="mt-5 text-[0.7rem] tracking-[0.15em] uppercase text-muted">
+              — ${escapeHtml(review.username || 'Anonymous')}
+            </p>
+          </article>
+        `).join('')}
+      </div>`
+  } catch (error) {
+    container.innerHTML = `
+      <div class="p-10 text-center text-[0.72rem] tracking-[0.2em] uppercase text-muted">
+        Reviews are temporarily unavailable.
+      </div>`
+  }
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;')
 }
 
 async function loadTopProducts() {
