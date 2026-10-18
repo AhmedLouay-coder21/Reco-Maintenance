@@ -3,6 +3,8 @@ package com.Reco.backend.controller;
 import com.Reco.backend.dto.request.ProductRequest;
 import com.Reco.backend.dto.response.ProductResponse;
 import com.Reco.backend.service.ProductService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -14,6 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 
+@Tag(name = "Product", description = "Catalog browsing and product administration")
 @RestController
 @RequestMapping("/api/v1/products")
 public class ProductController {
@@ -24,6 +27,7 @@ public class ProductController {
         this.productService = productService;
     }
 
+    @Operation(summary = "Browse products with optional category filter, search and sorting")
     @GetMapping
     public ResponseEntity<Page<ProductResponse>> listProducts(
 
@@ -41,11 +45,13 @@ public class ProductController {
         return ResponseEntity.ok(productService.listProducts(categoryId, q, pageable));
     }
 
+    @Operation(summary = "Fetch a single product by id")
     @GetMapping("/{productId}")
     public ResponseEntity<ProductResponse> getProductById(@PathVariable Long productId) {
         return ResponseEntity.ok(productService.getProductById(productId));
     }
 
+    @Operation(summary = "Create a new product")
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody ProductRequest request) {
@@ -53,6 +59,7 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.CREATED).body(productService.createProduct(request));
     }
 
+    @Operation(summary = "Update an existing product")
     @PutMapping("/{productId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductResponse> updateProduct(
@@ -61,6 +68,7 @@ public class ProductController {
         return ResponseEntity.ok(productService.updateProduct(request, productId));
     }
 
+    @Operation(summary = "Delete a product and detach it from dependent records")
     @DeleteMapping("/{productId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductResponse> deleteProduct(@PathVariable Long productId) {
