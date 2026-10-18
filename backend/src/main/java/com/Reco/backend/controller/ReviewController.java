@@ -45,6 +45,13 @@ public class ReviewController {
         return ResponseEntity.ok(reviewService.getReviewsByProduct(productId, pageable));
     }
 
+    @GetMapping("/top")
+    public ResponseEntity<List<ReviewResponse>> getTopReviews(
+            @RequestParam(defaultValue = "6") int limit
+    ) {
+        return ResponseEntity.ok(reviewService.getTopReviews(limit));
+    }
+
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<ReviewResponse>> getReviewsByUser(@PathVariable Long userId) {
         return ResponseEntity.ok(reviewService.getReviewsByUser(userId));
