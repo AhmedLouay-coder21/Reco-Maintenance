@@ -1,7 +1,1 @@
 .idea/
-
-# Local frontend runtime
-frontend/node/
-
-# Local backend configuration
-backend/src/main/resources/application.properties
