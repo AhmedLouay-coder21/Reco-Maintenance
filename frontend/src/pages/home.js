@@ -253,16 +253,8 @@ async function bindTopProductCards(container, topProducts) {
     const id = Number(card.dataset.productId)
     const product = topProducts.find(item => item.productId === id)
     card.querySelector('.btn-cart')?.addEventListener('click', event => {
-          if (userId) {
-            api(`/users/${userId}/interactions`, {
-              method: 'POST',
-              body: JSON.stringify({
-                productId: product.id || product.productId,
-                interactionType: 'CART_ADD'
-              })
-            }).catch(() => {});
-          }
       event.stopPropagation()
+      // MR-17 fix: no CART_ADD tracking here — addToCart sends it once, after the add succeeds
       addToCart(product)
     })
 

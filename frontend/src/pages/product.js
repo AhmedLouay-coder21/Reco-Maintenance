@@ -234,12 +234,17 @@ function renderProduct(product) {
   });
 
   document.getElementById('product-add-cart')?.addEventListener('click', () => addToCart(product));
-  document.getElementById('product-buy-now')?.addEventListener('click', e => {
-    if(isAuthenticated() && isTokenValid())
-    {
+  document.getElementById('product-buy-now')?.addEventListener('click', async e => {
+    // MR-16 fix: the "need to log in" toast only shows when actually unauthenticated,
+    // and the product is added to the cart before navigating to /payment
+    if (!isAuthenticated() || !isTokenValid()) {
+      showToast('You need to be logged in to make a purchase', 'error');
+      return;
+    }
+    const added = await addToCart(product);
+    if (added) {
       window.location.href = '/payment';
     }
-    showToast('You need to be logged in to make a purchase', 'error');
   });
 }
 
@@ -440,14 +445,23 @@ function renderFrequentlyBought() {
 async function addToCart(product) {
   if (!isAuthenticated() || !isTokenValid()) {
     showToast('Please log in to add items to cart', 'error');
-    return;
+    return false;
   }
 
   try {
     await api('/cart/items', { method: 'POST', body: JSON.stringify({ productId: product.id, quantity: 1 }) });
     showToast('Added to cart');
+    // MR-17 fix: the CART_ADD tracking call fires only after the cart add succeeded
+    api('/users/me')
+      .then(me => api(`/users/${me.id}/interactions`, {
+        method: 'POST',
+        body: JSON.stringify({ productId: product.id, interactionType: 'CART_ADD' })
+      }))
+      .catch(() => {});
+    return true;
   } catch (err) {
     showToast(err?.message || 'Failed to add item', 'error');
+    return false;
   }
 }
 

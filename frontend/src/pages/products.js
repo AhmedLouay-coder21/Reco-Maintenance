@@ -617,16 +617,18 @@ export async function addToCart(product) {
         quantity: 1,
     };
 
-    const users = await api('/users/me');
-    const userId = users.id;
     try {
-        api(`/users/${userId}/interactions`, {
-            method: 'POST',
-            body: JSON.stringify({productId: product.id || product.productId, interactionType: 'CART_ADD'})
-        }).catch(() => {});
         const cartResponse = await api('/cart/items', {method: 'POST', body: JSON.stringify(body)});
         applyCart(cartResponse);
         showToast(`${product.name} added to cart`);
+        // MR-17 fix: the CART_ADD tracking call fires only after the cart add succeeded
+        // (it used to be fired before/beside the cart call, double-counting and racing it)
+        api('/users/me')
+            .then(users => api(`/users/${users.id}/interactions`, {
+                method: 'POST',
+                body: JSON.stringify({productId: product.id || product.productId, interactionType: 'CART_ADD'})
+            }))
+            .catch(() => {});
     } catch (err) {
         showToast(err?.message || 'Failed to add item');
     }
