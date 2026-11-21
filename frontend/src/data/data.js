@@ -2,7 +2,7 @@
 export const NAV_LINKS = [
   { href: '/', label: 'Home' },
   { href: '/products', label: 'Browse' },
-  { href: '/About',    label: 'About Us'  },
+  { href: '/about',    label: 'About Us'  },
 ]
 
 export const MARQUEE_ITEMS = [

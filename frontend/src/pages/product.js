@@ -2,6 +2,7 @@ import { api, getUserFirstName, isAuthenticated, isTokenValid } from '../api/aut
 import { Login } from './login.js';
 import { DashboardView } from './dashboard.js';
 import { showToast } from '../utils/alert.js';
+import { addToCart, bindCartEvents, cartWidget, loadCart } from './products.js';
 const state = {
   productId: null,
   product: null,
@@ -17,6 +18,8 @@ export async function ProductView() {
 
   const app = document.getElementById('app');
   app.innerHTML = productShell();
+  bindCartEvents();
+  await loadCart();
 
   const params = new URLSearchParams(window.location.search);
   const id = Number(params.get('id'));
@@ -95,6 +98,8 @@ function productShell() {
         ${loadingBlock('Scanning related product clusters')}
       </div>
     </section>
+
+    ${cartWidget()}
   `;
 }
 
@@ -234,12 +239,17 @@ function renderProduct(product) {
   });
 
   document.getElementById('product-add-cart')?.addEventListener('click', () => addToCart(product));
-  document.getElementById('product-buy-now')?.addEventListener('click', e => {
-    if(isAuthenticated() && isTokenValid())
-    {
+  document.getElementById('product-buy-now')?.addEventListener('click', async e => {
+    // MR-16 fix: the "need to log in" toast only shows when actually unauthenticated,
+    // and the product is added to the cart before navigating to /payment
+    if (!isAuthenticated() || !isTokenValid()) {
+      showToast('You need to be logged in to make a purchase', 'error');
+      return;
+    }
+    const added = await addToCart(product);
+    if (added) {
       window.location.href = '/payment';
     }
-    showToast('You need to be logged in to make a purchase', 'error');
   });
 }
 
@@ -435,20 +445,6 @@ function renderFrequentlyBought() {
       }
     });
   });
-}
-
-async function addToCart(product) {
-  if (!isAuthenticated() || !isTokenValid()) {
-    showToast('Please log in to add items to cart', 'error');
-    return;
-  }
-
-  try {
-    await api('/cart/items', { method: 'POST', body: JSON.stringify({ productId: product.id, quantity: 1 }) });
-    showToast('Added to cart');
-  } catch (err) {
-    showToast(err?.message || 'Failed to add item', 'error');
-  }
 }
 
 function renderStars(avg) {

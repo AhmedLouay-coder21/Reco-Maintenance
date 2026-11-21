@@ -793,15 +793,16 @@ async function loadRecs() {
                 }
                 try {
                     const productId = Number(btn.dataset.addCart);
-                    await api(`/users/${uid}/interactions`, {
-                        method: 'POST',
-                        body: JSON.stringify({productId, interactionType: 'CART_ADD'}),
-                    }).catch(() => {});
                     await api('/cart/items', {
                         method: 'POST',
                         body: JSON.stringify({productId, quantity: 1}),
                     });
                     showToast('Added to cart');
+                    // MR-17 fix: track the add only after the cart call succeeded
+                    api(`/users/${uid}/interactions`, {
+                        method: 'POST',
+                        body: JSON.stringify({productId, interactionType: 'CART_ADD'}),
+                    }).catch(() => {});
                 } catch (e) {
                     showToast(e.message, 'error');
                 }

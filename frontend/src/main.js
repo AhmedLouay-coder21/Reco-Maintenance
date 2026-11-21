@@ -3,7 +3,7 @@ import {
   NAV_LINKS, FOOTER_LINKS, PRODUCTS
 } from './data/data.js'
 import {
-  Nav, Footer, ProductCard
+  Nav, Footer, ProductCard, bindMobileNav
 } from './components/components.js'
 import { Login } from './pages/login.js'
 import { HomeView } from './pages/home.js'
@@ -12,6 +12,7 @@ import { DashboardView } from './pages/dashboard.js'
 import { ProductsView } from './pages/products.js'
 import { ProductView } from './pages/product.js'
 import { PaymentView } from './pages/payment.js'
+import { AboutView } from './pages/about.js'
 import { showToast } from './utils/alert.js'
 
 route()
@@ -67,6 +68,10 @@ function route() {
   const path = window.location.pathname
   if (path === '/products') {
     ProductsView();
+    return;
+  }
+  if (path === '/about') {
+    AboutView();
     return;
   }
   if (path === '/product') {
@@ -128,6 +133,7 @@ export function GenerateMain()
   {
     document.getElementById('nav-slot').innerHTML = Nav(NAV_LINKS)
   }
+  bindMobileNav()
   document.getElementById('loginBtn').addEventListener('click', e => {
     window.location.href = '/login';
   });

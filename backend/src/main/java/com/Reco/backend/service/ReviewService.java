@@ -14,6 +14,7 @@ import com.Reco.backend.repository.ProductRepository;
 import com.Reco.backend.repository.ReviewRepository;
 import com.Reco.backend.repository.UserRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -75,6 +76,16 @@ public class ReviewService {
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
         return reviewRepository.findByProduct(product, pageable)
                 .map(this::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReviewResponse> getTopReviews(int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 50));
+        Pageable pageable = PageRequest.of(0, safeLimit);
+        return reviewRepository.findByOrderByRatingDescCreatedAtDesc(pageable)
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

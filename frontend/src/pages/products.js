@@ -28,6 +28,12 @@ function applyCart(cartResponse) {
 }
 
 export async function loadCart() {
+    if (!isAuthenticated() || !isTokenValid()) {
+        state.cart = [];
+        updateCartBadge();
+        return;
+    }
+
     try {
         const cartResponse = await api('/cart');
         applyCart(cartResponse);
@@ -165,7 +171,12 @@ function productsShell() {
       </div>
     </div>
 
-    <!-- floating cart button -->
+    ${cartWidget()}
+  `;
+}
+
+export function cartWidget() {
+    return `
     <button id="cart-fab"
       class="fixed bottom-8 right-8 z-[150] w-14 h-14 rounded-full border-2 border-secondary bg-main/80 backdrop-blur-lg
              flex items-center justify-center text-xl text-line-bright
@@ -178,7 +189,6 @@ function productsShell() {
       </span>
     </button>
 
-    <!-- CART SIDEBAR -->
     <div id="cart-overlay" class="fixed inset-0 z-[200] pointer-events-none">
       <div id="cart-backdrop" class="absolute inset-0 bg-main/0 backdrop-blur-none transition-all duration-500"></div>
       <div id="cart-drawer"
@@ -187,8 +197,7 @@ function productsShell() {
                   flex flex-col overflow-hidden">
         <div id="cart-content" class="flex flex-col h-full"></div>
       </div>
-    </div>
-  `;
+    </div>`;
 }
 
 export function skeletonGrid() {
@@ -605,11 +614,11 @@ function closeDetail() {
 export async function addToCart(product) {
     if (!isAuthenticated() || !isTokenValid()) {
         showToast('Please log in to use the cart');
-        return;
+        return false;
     }
     if (!product || !product.id && !product.productId) {
         showToast('Product not available');
-        return;
+        return false;
     }
 
     const body = {
@@ -617,18 +626,22 @@ export async function addToCart(product) {
         quantity: 1,
     };
 
-    const users = await api('/users/me');
-    const userId = users.id;
     try {
-        api(`/users/${userId}/interactions`, {
-            method: 'POST',
-            body: JSON.stringify({productId: product.id || product.productId, interactionType: 'CART_ADD'})
-        }).catch(() => {});
         const cartResponse = await api('/cart/items', {method: 'POST', body: JSON.stringify(body)});
         applyCart(cartResponse);
         showToast(`${product.name} added to cart`);
+        // MR-17 fix: the CART_ADD tracking call fires only after the cart add succeeded
+        // (it used to be fired before/beside the cart call, double-counting and racing it)
+        api('/users/me')
+            .then(users => api(`/users/${users.id}/interactions`, {
+                method: 'POST',
+                body: JSON.stringify({productId: product.id || product.productId, interactionType: 'CART_ADD'})
+            }))
+            .catch(() => {});
+        return true;
     } catch (err) {
         showToast(err?.message || 'Failed to add item');
+        return false;
     }
 }
 
@@ -684,6 +697,7 @@ function openCart() {
     const overlay = document.getElementById('cart-overlay');
     const backdrop = document.getElementById('cart-backdrop');
     const drawer = document.getElementById('cart-drawer');
+    if (!overlay || !backdrop || !drawer) return;
     overlay.style.pointerEvents = 'all';
     backdrop.style.background = 'rgba(4,1,10,0.7)';
     backdrop.style.backdropFilter = 'blur(4px)';
@@ -696,6 +710,7 @@ function closeCart() {
     const overlay = document.getElementById('cart-overlay');
     const backdrop = document.getElementById('cart-backdrop');
     const drawer = document.getElementById('cart-drawer');
+    if (!overlay || !backdrop || !drawer) return;
     overlay.style.pointerEvents = 'none';
     backdrop.style.background = 'rgba(4,1,10,0)';
     backdrop.style.backdropFilter = 'blur(0px)';
@@ -788,6 +803,11 @@ function categoryName(id) {
     return cat ? cat.name : `Cat #${id}`;
 }
 
+export function bindCartEvents() {
+    document.getElementById('cart-fab')?.addEventListener('click', openCart);
+    document.getElementById('cart-backdrop')?.addEventListener('click', closeCart);
+}
+
 export function bindEvents() {
     document.getElementById('search-input')?.addEventListener('input', e => onSearch(e.target.value));
 
@@ -817,7 +837,5 @@ export function bindEvents() {
         renderProducts();
     });
 
-    document.getElementById('cart-fab')?.addEventListener('click', openCart);
-
-    document.getElementById('cart-backdrop')?.addEventListener('click', closeCart);
+    bindCartEvents();
 }
