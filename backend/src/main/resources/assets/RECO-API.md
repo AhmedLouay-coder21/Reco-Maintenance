@@ -928,9 +928,13 @@ Uses Strategy pattern:
 
 A default admin account is seeded on startup:
 
-| Email | Password | Role |
-|---|---|---|
-| `admin@admin.com` | `123456789` | ADMIN |
+| Setting | Property | Env var | Default |
+|---|---|---|---|
+| Email | `app.seed.admin.email` | `RECO_ADMIN_EMAIL` | `admin@admin.com` |
+| Username | `app.seed.admin.username` | `RECO_ADMIN_USERNAME` | `Mr.Admin` |
+| Password | `app.seed.admin.password` | `RECO_ADMIN_PASSWORD` | random, logged once at startup |
+
+The account is only created when the `users` table is empty.
 
 ---
 
