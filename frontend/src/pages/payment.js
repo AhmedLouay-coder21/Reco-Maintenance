@@ -219,7 +219,8 @@ function bindPaymentForm() {
         }),
       });
 
-      setStatus(`Payment ${payment.status} for order #${order.id}`, 'success');
+      // MR-13 fix: style the status line by the actual payment status — FAILED must not render in success style
+      setStatus(`Payment ${payment.status} for order #${order.id}`, payment.status === 'SUCCESS' ? 'success' : 'error');
       await loadCart();
     } catch (err) {
       setStatus(err?.message || 'Payment failed', 'error');

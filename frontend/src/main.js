@@ -12,6 +12,7 @@ import { DashboardView } from './pages/dashboard.js'
 import { ProductsView } from './pages/products.js'
 import { ProductView } from './pages/product.js'
 import { PaymentView } from './pages/payment.js'
+import { AboutView } from './pages/about.js'
 import { showToast } from './utils/alert.js'
 
 route()
@@ -67,6 +68,10 @@ function route() {
   const path = window.location.pathname
   if (path === '/products') {
     ProductsView();
+    return;
+  }
+  if (path === '/about') {
+    AboutView();
     return;
   }
   if (path === '/product') {
