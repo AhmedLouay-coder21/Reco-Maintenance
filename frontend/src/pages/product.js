@@ -2,6 +2,7 @@ import { api, getUserFirstName, isAuthenticated, isTokenValid } from '../api/aut
 import { Login } from './login.js';
 import { DashboardView } from './dashboard.js';
 import { showToast } from '../utils/alert.js';
+import { addToCart, bindCartEvents, cartWidget, loadCart } from './products.js';
 const state = {
   productId: null,
   product: null,
@@ -17,6 +18,8 @@ export async function ProductView() {
 
   const app = document.getElementById('app');
   app.innerHTML = productShell();
+  bindCartEvents();
+  await loadCart();
 
   const params = new URLSearchParams(window.location.search);
   const id = Number(params.get('id'));
@@ -95,6 +98,8 @@ function productShell() {
         ${loadingBlock('Scanning related product clusters')}
       </div>
     </section>
+
+    ${cartWidget()}
   `;
 }
 
@@ -435,20 +440,6 @@ function renderFrequentlyBought() {
       }
     });
   });
-}
-
-async function addToCart(product) {
-  if (!isAuthenticated() || !isTokenValid()) {
-    showToast('Please log in to add items to cart', 'error');
-    return;
-  }
-
-  try {
-    await api('/cart/items', { method: 'POST', body: JSON.stringify({ productId: product.id, quantity: 1 }) });
-    showToast('Added to cart');
-  } catch (err) {
-    showToast(err?.message || 'Failed to add item', 'error');
-  }
 }
 
 function renderStars(avg) {

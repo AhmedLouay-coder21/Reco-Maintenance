@@ -61,6 +61,10 @@ export function Nav(links, currentPath = '/' , Login) {
       <a href="/" class="logo font-bebas text-3xl tracking-[0.15em] text-line-bright relative drop-shadow-[0_0_20px_var(--color-line-bright)] text-title">RECO</a>
       <ul class="nav-links hidden md:flex gap-10">${linkItems}</ul>
       <div class="nav-right flex items-center gap-4">
+        <button id="mobile-nav-toggle" aria-label="Open navigation menu" aria-expanded="false"
+            class="mobile-nav-toggle md:hidden h-10 w-10 border border-secondary/50 rounded-sm text-line-bright text-xl flex items-center justify-center hover:bg-secondary/10 transition-all">
+          ☰
+        </button>
         <button id="loginBtn" class="cart-btn group flex items-center gap-2 px-5 py-2 border border-secondary/50 rounded-sm text-[0.72rem] font-semibold tracking-widest uppercase text-line-bright transition-all hover:bg-secondary/10 hover:shadow-[0_0_20px_var(--color-pulse-glow1)]">
           ⬡ Login
         </button>
@@ -76,8 +80,35 @@ export function Nav(links, currentPath = '/' , Login) {
           </svg>
         </button>
       </div>
+      <div id="mobile-nav-menu" class="mobile-nav-menu hidden md:hidden absolute top-full left-0 right-0 border-b border-border bg-main/95 backdrop-blur-lg">
+        <ul class="flex flex-col gap-1 p-4">${linkItems}</ul>
+      </div>
     </nav>
     `
+}
+
+export function bindMobileNav() {
+  const toggle = document.getElementById('mobile-nav-toggle');
+  const menu = document.getElementById('mobile-nav-menu');
+  if (!toggle || !menu || toggle.dataset.bound === 'true') return;
+
+  toggle.dataset.bound = 'true';
+  toggle.addEventListener('click', () => {
+    const isOpen = !menu.classList.contains('hidden');
+    menu.classList.toggle('hidden', isOpen);
+    toggle.setAttribute('aria-expanded', String(!isOpen));
+    toggle.setAttribute('aria-label', isOpen ? 'Open navigation menu' : 'Close navigation menu');
+    toggle.textContent = isOpen ? '☰' : '×';
+  });
+
+  menu.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      menu.classList.add('hidden');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', 'Open navigation menu');
+      toggle.textContent = '☰';
+    });
+  });
 }
 
 export function Marquee(items) {
